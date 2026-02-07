@@ -27,14 +27,14 @@ A comprehensive social media scheduling and analytics module for Frappe/ERPNext.
 ### Prerequisites
 
 - Frappe v15+
-- Python 3.10+
+- FCRM
 - ERPNext (optional)
 
 ### Install via Bench
 
 ```bash
 # Get the app
-bench get-app https://github.com/prethive303/frappe_social.git
+bench get-app https://github.com/Dev-Abhi-49/frappe_social_scheduler.git
 
 # Install on your site
 bench --site your-site.local install-app frappe_social
@@ -51,7 +51,7 @@ pip install -r requirements.txt
 
 ```bash
 cd frappe-bench/apps
-git clone https://github.com/prethive303/frappe_social.git
+git clone https://github.com/Dev-Abhi-49/frappe_social_scheduler.git
 cd frappe_social
 pip install -r requirements.txt
 cd ../..
@@ -77,7 +77,7 @@ Navigate to **Social Settings** and enter API credentials for each platform:
 
 #### Meta (Facebook/Instagram)
 - Create an app at [developers.facebook.com](https://developers.facebook.com)
-- Required permissions: `instagram_basic`, `instagram_content_publish`, `pages_manage_posts`, `business_management`
+- Required permissions: `instagram_basic`, `instagram_content_publish`, `pages_manage_posts`, `business_management`, `pages_show_list`,`pages_read_engagement`, `pages_manage_metadata`, `pages_read_user_content`, `pages_read_user_insights`, `pages_manage_ads`, `pages_manage_posts` etc.
 
 #### YouTube
 - Create credentials at [console.cloud.google.com](https://console.cloud.google.com)
@@ -153,8 +153,8 @@ frappe.call({
 |------|----------|----------|
 | `publish_scheduled_posts` | Every minute | Publish due posts |
 | `refresh_expiring_tokens` | Hourly | Refresh tokens expiring within 5 days |
-| `fetch_daily_analytics` | Daily 6 AM | Fetch account analytics |
-| `fetch_post_analytics` | Every 6 hours | Fetch post analytics (last 7 days) |
+| `fetch_daily_analytics` | Every 6 hours | Fetch account analytics |
+| `fetch_post_analytics` | Hourly | Fetch post analytics (last 7 days) |
 | `reset_rate_limit_counters` | Daily midnight | Reset daily counters |
 
 ## Platform-Specific Notes
@@ -231,7 +231,7 @@ MIT License - see [LICENSE](LICENSE) file.
 
 ## Support
 
-- GitHub Issues: [Report bugs or request features](https://github.com/prithive303/frappe_social/issues)
+- GitHub Issues: [Report bugs or request features](https://github.com/Dev-Abhi-49/frappe_social/issues)
 
 ## Changelog
 
