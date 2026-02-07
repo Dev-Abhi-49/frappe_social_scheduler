@@ -32,10 +32,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/Dev-Abhi-49/frappe-social-media-scheduler"
-Documentation = "https://github.com/Dev-Abhi-49/frappe-social-media-scheduler#readme"
-Repository = "https://github.com/Dev-Abhi-49/frappe-social-media-scheduler.git"
-Issues = "https://github.com/Dev-Abhi-49/frappe-social-media-scheduler/issues"
+Homepage = "https://github.com/Dev-Abhi-49/frappe-social-scheduler"
+Documentation = "https://github.com/Dev-Abhi-49/frappe-social-scheduler#readme"
+Repository = "https://github.com/Dev-Abhi-49/frappe-social-scheduler.git"
+Issues = "https://github.com/Dev-Abhi-49/frappe-social-scheduler/issues"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]

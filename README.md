@@ -231,7 +231,7 @@ MIT License - see [LICENSE](LICENSE) file.
 
 ## Support
 
-- GitHub Issues: [Report bugs or request features](https://github.com/Dev-Abhi-49/frappe_social/issues)
+- GitHub Issues: [Report bugs or request features](https://github.com/Dev-Abhi-49/frappe_social_scheduler/issues)
 
 ## Changelog
 
