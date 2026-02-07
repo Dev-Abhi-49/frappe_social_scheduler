@@ -32,14 +32,17 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/Dev-Abhi-49/frappe-social-scheduler"
-Documentation = "https://github.com/Dev-Abhi-49/frappe-social-scheduler#readme"
-Repository = "https://github.com/Dev-Abhi-49/frappe-social-scheduler.git"
-Issues = "https://github.com/Dev-Abhi-49/frappe-social-scheduler/issues"
+Homepage = "https://github.com/Dev-Abhi-49/frappe_social_scheduler"
+Documentation = "https://github.com/Dev-Abhi-49/frappe_social_scheduler#readme"
+Repository = "https://github.com/Dev-Abhi-49/frappe_social_scheduler.git"
+Issues = "https://github.com/Dev-Abhi-49/frappe_social_scheduler/issues"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.bench.frappe-dependencies]
+frappe = ">=15,<16"
 
 [tool.setuptools.packages.find]
 where = ["."]
