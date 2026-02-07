@@ -1,0 +1,82 @@
+{
+ "actions": [],
+ "creation": "2026-01-19 10:57:36.552026",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "time_period_for_budget_increase_section",
+  "start_date",
+  "end_date",
+  "column_break_fbfr",
+  "start_time",
+  "end_time",
+  "section_break_iqum",
+  "select_daily_budget_by_value_amountpercentage",
+  "amount",
+  "spend_html"
+ ],
+ "fields": [
+  {
+   "fieldname": "time_period_for_budget_increase_section",
+   "fieldtype": "Section Break",
+   "label": "Time period for budget increase"
+  },
+  {
+   "default": "Increase daily budget by value amount ($)",
+   "fieldname": "select_daily_budget_by_value_amountpercentage",
+   "fieldtype": "Select",
+   "label": "Select Daily Budget By Value Amount/Percentage",
+   "options": "Increase daily budget by value amount ($)\nIncrease daily budget by a percentage (%)"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "label": "Amount"
+  },
+  {
+   "fieldname": "spend_html",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "start_date",
+   "fieldtype": "Date",
+   "label": "Start Date"
+  },
+  {
+   "fieldname": "end_date",
+   "fieldtype": "Date",
+   "label": "End Date"
+  },
+  {
+   "fieldname": "column_break_fbfr",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "start_time",
+   "fieldtype": "Time",
+   "label": "Start Time"
+  },
+  {
+   "fieldname": "end_time",
+   "fieldtype": "Time",
+   "label": "End Time"
+  },
+  {
+   "fieldname": "section_break_iqum",
+   "fieldtype": "Section Break"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-01-19 11:13:38.997895",
+ "modified_by": "Administrator",
+ "module": "Ads Manager",
+ "name": "Time Period for Budget",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

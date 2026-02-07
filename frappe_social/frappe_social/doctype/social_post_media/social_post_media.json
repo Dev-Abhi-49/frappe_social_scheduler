@@ -1,0 +1,71 @@
+{
+ "actions": [],
+ "creation": "2026-02-05 12:54:14.783541",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "file",
+  "file_type",
+  "image_url",
+  "column_break_zsmq",
+  "file_size",
+  "media_hash",
+  "image_preview"
+ ],
+ "fields": [
+  {
+   "fieldname": "file",
+   "fieldtype": "Attach",
+   "in_list_view": 1,
+   "label": "File",
+   "reqd": 1
+  },
+  {
+   "fieldname": "file_type",
+   "fieldtype": "Data",
+   "label": "File Type",
+   "read_only": 1
+  },
+  {
+   "fieldname": "file_size",
+   "fieldtype": "Int",
+   "label": "File Size (bytes)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "media_hash",
+   "fieldtype": "Data",
+   "label": "Media Hash/ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "image_url",
+   "fieldtype": "Small Text",
+   "label": "Image URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "image_preview",
+   "fieldtype": "Image",
+   "in_preview": 1,
+   "label": "Image Preview",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_zsmq",
+   "fieldtype": "Column Break"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-02-05 21:34:23.681636",
+ "modified_by": "Administrator",
+ "module": "Frappe Social",
+ "name": "Social Post Media",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

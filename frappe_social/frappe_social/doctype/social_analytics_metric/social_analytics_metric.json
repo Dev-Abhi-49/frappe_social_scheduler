@@ -1,0 +1,18 @@
+{
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "istable": 1,
+  "field_order": ["metric_name", "metric_value", "previous_value", "change", "change_percent"],
+  "fields": [
+    {"fieldname": "metric_name", "fieldtype": "Data", "in_list_view": 1, "label": "Metric"},
+    {"fieldname": "metric_value", "fieldtype": "Float", "in_list_view": 1, "label": "Value"},
+    {"fieldname": "previous_value", "fieldtype": "Float", "label": "Previous"},
+    {"fieldname": "change", "fieldtype": "Float", "in_list_view": 1, "label": "Change"},
+    {"fieldname": "change_percent", "fieldtype": "Float", "label": "Change %"}
+  ],
+  "module": "Frappe Social",
+  "name": "Social Analytics Metric",
+  "owner": "Administrator",
+  "sort_field": "modified",
+  "sort_order": "DESC"
+}

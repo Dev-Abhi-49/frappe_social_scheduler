@@ -1,0 +1,190 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2025-12-20 18:08:26.925206",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "social_post",
+  "platform",
+  "integration",
+  "post_id",
+  "fetched_at",
+  "engagement_section",
+  "impressions",
+  "reach",
+  "engagement_rate",
+  "column_break_eng",
+  "likes",
+  "comments",
+  "shares",
+  "saves",
+  "clicks",
+  "video_section",
+  "video_views",
+  "watch_time_seconds",
+  "avg_watch_percentage"
+ ],
+ "fields": [
+  {
+   "fieldname": "social_post",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Social Post",
+   "options": "Social Post",
+   "reqd": 1
+  },
+  {
+   "fieldname": "platform",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Platform",
+   "reqd": 1
+  },
+  {
+   "fieldname": "integration",
+   "fieldtype": "Link",
+   "label": "Integration",
+   "options": "Social Integration"
+  },
+  {
+   "fieldname": "post_id",
+   "fieldtype": "Data",
+   "label": "Post ID"
+  },
+  {
+   "fieldname": "fetched_at",
+   "fieldtype": "Datetime",
+   "label": "Fetched At"
+  },
+  {
+   "fieldname": "engagement_section",
+   "fieldtype": "Section Break",
+   "label": "Engagement"
+  },
+  {
+   "default": "0",
+   "fieldname": "impressions",
+   "fieldtype": "Int",
+   "label": "Impressions"
+  },
+  {
+   "default": "0",
+   "fieldname": "reach",
+   "fieldtype": "Int",
+   "label": "Reach"
+  },
+  {
+   "default": "0",
+   "fieldname": "engagement_rate",
+   "fieldtype": "Float",
+   "label": "Engagement Rate %"
+  },
+  {
+   "fieldname": "column_break_eng",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "likes",
+   "fieldtype": "Int",
+   "label": "Likes"
+  },
+  {
+   "default": "0",
+   "fieldname": "comments",
+   "fieldtype": "Int",
+   "label": "Comments"
+  },
+  {
+   "default": "0",
+   "fieldname": "shares",
+   "fieldtype": "Int",
+   "label": "Shares"
+  },
+  {
+   "default": "0",
+   "fieldname": "saves",
+   "fieldtype": "Int",
+   "label": "Saves"
+  },
+  {
+   "default": "0",
+   "fieldname": "clicks",
+   "fieldtype": "Int",
+   "label": "Clicks"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "video_section",
+   "fieldtype": "Section Break",
+   "label": "Video Metrics"
+  },
+  {
+   "default": "0",
+   "fieldname": "video_views",
+   "fieldtype": "Int",
+   "label": "Video Views"
+  },
+  {
+   "default": "0",
+   "fieldname": "watch_time_seconds",
+   "fieldtype": "Int",
+   "label": "Watch Time (sec)"
+  },
+  {
+   "default": "0",
+   "fieldname": "avg_watch_percentage",
+   "fieldtype": "Float",
+   "label": "Avg Watch %"
+  }
+ ],
+ "hide_toolbar": 1,
+ "in_create": 1,
+ "links": [],
+ "modified": "2026-02-04 22:29:11.213223",
+ "modified_by": "Administrator",
+ "module": "Frappe Social",
+ "name": "Social Post Analytics",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Administrator",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Scheduler",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "fetched_at",
+ "sort_order": "DESC",
+ "states": []
+}

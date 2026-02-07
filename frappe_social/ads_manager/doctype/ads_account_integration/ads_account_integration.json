@@ -1,0 +1,404 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:Ad-{platform}-{ads_account_name}",
+ "creation": "2026-01-03 11:19:54.606246",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "account_name",
+  "account_description",
+  "column_break_main",
+  "enabled",
+  "platform",
+  "organisation",
+  "connection_status",
+  "profile_image",
+  "profile_section",
+  "ads_account_name",
+  "ad_account_id",
+  "account_type",
+  "currency",
+  "column_break_profile",
+  "ad_id",
+  "account_status",
+  "balance",
+  "amount_spent",
+  "authorized_user_section",
+  "authorized_user_id",
+  "authorized_user_name",
+  "column_break_zdpd",
+  "authorized_user_email",
+  "authorization_date",
+  "section_break_wkub",
+  "fb_pages",
+  "instagram_configuration_section",
+  "instagram_business_account_id",
+  "instagram_username",
+  "column_break_instagram",
+  "facebook_page_id",
+  "facebook_page_name",
+  "oauth_section",
+  "access_token",
+  "token_expiry",
+  "oauth_10a_token",
+  "column_break_oauth",
+  "refresh_token",
+  "page_access_token",
+  "oauth_10a_secret",
+  "sync_settings_section",
+  "auto_sync",
+  "sync_frequency",
+  "column_break_sync",
+  "last_synced",
+  "sync_status",
+  "error_section",
+  "last_error",
+  "last_error_time"
+ ],
+ "fields": [
+  {
+   "fieldname": "account_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Account Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "account_description",
+   "fieldtype": "Small Text",
+   "label": "Account Description"
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "platform",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Platform",
+   "options": "Facebook\nInstagram",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled"
+  },
+  {
+   "fieldname": "profile_section",
+   "fieldtype": "Section Break",
+   "label": "Ad Account Information"
+  },
+  {
+   "default": "Business",
+   "fieldname": "account_type",
+   "fieldtype": "Select",
+   "label": "Account Type",
+   "options": "Personal\nBusiness\nAgency\nPage\nOrganization\nChannel",
+   "read_only": 1
+  },
+  {
+   "default": "INR",
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Currency",
+   "options": "Currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_profile",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "account_status",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Account Status",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "balance",
+   "fieldtype": "Currency",
+   "label": "Account Balance",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "amount_spent",
+   "fieldtype": "Currency",
+   "label": "Amount Spent",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "depends_on": "eval:doc.platform === 'Instagram';",
+   "fieldname": "instagram_configuration_section",
+   "fieldtype": "Section Break",
+   "label": "Instagram Configuration"
+  },
+  {
+   "depends_on": "eval:doc.platform === 'Instagram'",
+   "fieldname": "instagram_business_account_id",
+   "fieldtype": "Data",
+   "label": "Instagram Business Account ID"
+  },
+  {
+   "fieldname": "instagram_username",
+   "fieldtype": "Data",
+   "label": "Instagram Username",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_instagram",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.platform === 'Instagram'",
+   "description": "Required - Instagram must be linked to a Facebook Page",
+   "fieldname": "facebook_page_id",
+   "fieldtype": "Data",
+   "label": "Connected Facebook Page ID"
+  },
+  {
+   "fieldname": "facebook_page_name",
+   "fieldtype": "Data",
+   "label": "Facebook Page Name",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "description": "The user who authorized this connection",
+   "fieldname": "authorized_user_section",
+   "fieldtype": "Section Break",
+   "label": "Authorization Details"
+  },
+  {
+   "fieldname": "authorized_user_id",
+   "fieldtype": "Data",
+   "label": "Authorized User ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "authorized_user_name",
+   "fieldtype": "Data",
+   "label": "Authorized User Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_zdpd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "authorized_user_email",
+   "fieldtype": "Data",
+   "label": "Authorized User Email",
+   "read_only": 1
+  },
+  {
+   "fieldname": "authorization_date",
+   "fieldtype": "Datetime",
+   "label": "Authorization Date",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "oauth_section",
+   "fieldtype": "Section Break",
+   "label": "OAuth Tokens"
+  },
+  {
+   "fieldname": "access_token",
+   "fieldtype": "Text",
+   "label": "Access Token"
+  },
+  {
+   "fieldname": "token_expiry",
+   "fieldtype": "Datetime",
+   "label": "Token Expiry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_oauth",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "refresh_token",
+   "fieldtype": "Password",
+   "label": "Refresh Token",
+   "read_only": 1
+  },
+  {
+   "fieldname": "page_access_token",
+   "fieldtype": "Text",
+   "label": "Page Access Token",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "sync_settings_section",
+   "fieldtype": "Section Break",
+   "label": "Sync Settings"
+  },
+  {
+   "default": "1",
+   "fieldname": "auto_sync",
+   "fieldtype": "Check",
+   "label": "Enable Auto Sync"
+  },
+  {
+   "default": "Daily",
+   "depends_on": "auto_sync;",
+   "fieldname": "sync_frequency",
+   "fieldtype": "Select",
+   "label": "Sync Frequency",
+   "options": "Hourly\nEvery 6 Hours\nDaily\nWeekly"
+  },
+  {
+   "fieldname": "column_break_sync",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_synced",
+   "fieldtype": "Datetime",
+   "label": "Last Synced",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sync_status",
+   "fieldtype": "Data",
+   "label": "Sync Status",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "collapsible_depends_on": "eval:doc.last_error;",
+   "fieldname": "error_section",
+   "fieldtype": "Section Break",
+   "label": "Error Information"
+  },
+  {
+   "fieldname": "last_error",
+   "fieldtype": "Small Text",
+   "label": "Last Error",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_error_time",
+   "fieldtype": "Datetime",
+   "label": "Last Error Time",
+   "read_only": 1
+  },
+  {
+   "fieldname": "organisation",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Organisation",
+   "options": "CRM Organization"
+  },
+  {
+   "default": "Not Connected",
+   "fieldname": "connection_status",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Connection Status",
+   "options": "Not Connected\nConnected\nExpired\nError",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_wkub",
+   "fieldtype": "Section Break",
+   "label": "Facebook Pages"
+  },
+  {
+   "fieldname": "fb_pages",
+   "fieldtype": "Table",
+   "options": "Facebook Pages",
+   "read_only": 1
+  },
+  {
+   "fieldname": "profile_image",
+   "fieldtype": "Attach Image",
+   "label": "Profile Image"
+  },
+  {
+   "fieldname": "oauth_10a_token",
+   "fieldtype": "Password",
+   "label": "OAuth 1.0a Token",
+   "read_only": 1
+  },
+  {
+   "fieldname": "oauth_10a_secret",
+   "fieldtype": "Data",
+   "label": "OAuth 1.0a Secret",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ad_account_id",
+   "fieldtype": "Data",
+   "label": "Ads Account ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ad_id",
+   "fieldtype": "Data",
+   "label": "Ads ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ads_account_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Ads Account Name"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-02-04 22:50:02.288065",
+ "modified_by": "Administrator",
+ "module": "Ads Manager",
+ "name": "Ads Account Integration",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Administrator",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Scheduler",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "ads_account_name",
+ "track_changes": 1
+}

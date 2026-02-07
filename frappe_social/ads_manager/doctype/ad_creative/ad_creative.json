@@ -1,0 +1,159 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-01-08 12:10:17.994310",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "basic_information_section",
+  "creative_name",
+  "creative_id",
+  "column_break_yifc",
+  "object_type",
+  "ad_setup_section",
+  "select_ad_type",
+  "multi_advertiser_ads",
+  "column_break_sbga",
+  "single_image_or_video",
+  "carousel",
+  "collection",
+  "section_break_vsyz",
+  "body",
+  "destination",
+  "title",
+  "link_url",
+  "column_break_sjrx",
+  "object_url",
+  "url_tags",
+  "call_to_action"
+ ],
+ "fields": [
+  {
+   "fieldname": "call_to_action",
+   "fieldtype": "Select",
+   "label": "Call To Action",
+   "options": "Learn More\nShop Now\nSign Up"
+  },
+  {
+   "fieldname": "creative_id",
+   "fieldtype": "Data",
+   "label": "Creative ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "basic_information_section",
+   "fieldtype": "Section Break",
+   "label": "Basic Information"
+  },
+  {
+   "fieldname": "object_type",
+   "fieldtype": "Select",
+   "label": "Object Type",
+   "options": "PAGE\nAPPLICATION\nDOMAIN\nPRODUCT_ITEM\nPRODUCT_SET\nOFFER\nEVENT\nSHARE\nSTATUS\nVIDEO\nUNKNOWN"
+  },
+  {
+   "fieldname": "column_break_yifc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_vsyz",
+   "fieldtype": "Section Break",
+   "label": "Destination"
+  },
+  {
+   "fieldname": "body",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Body"
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title"
+  },
+  {
+   "fieldname": "link_url",
+   "fieldtype": "Data",
+   "label": "Link URL"
+  },
+  {
+   "fieldname": "object_url",
+   "fieldtype": "Data",
+   "label": "Object URL"
+  },
+  {
+   "fieldname": "url_tags",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "URL Tags"
+  },
+  {
+   "fieldname": "column_break_sjrx",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "ad_setup_section",
+   "fieldtype": "Section Break",
+   "label": "Ad setup"
+  },
+  {
+   "fieldname": "select_ad_type",
+   "fieldtype": "Select",
+   "label": "Select Ad Type",
+   "options": "Create ad\nUse existing post\nUse Creative Hub mockup"
+  },
+  {
+   "default": "0",
+   "fieldname": "multi_advertiser_ads",
+   "fieldtype": "Check",
+   "label": "Multi-advertiser ads"
+  },
+  {
+   "fieldname": "column_break_sbga",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "single_image_or_video",
+   "fieldtype": "Check",
+   "label": "Single Image or Video"
+  },
+  {
+   "default": "0",
+   "fieldname": "carousel",
+   "fieldtype": "Check",
+   "label": "Carousel"
+  },
+  {
+   "default": "0",
+   "fieldname": "collection",
+   "fieldtype": "Check",
+   "label": "Collection"
+  },
+  {
+   "default": "Website",
+   "fieldname": "destination",
+   "fieldtype": "Select",
+   "label": "Destination",
+   "options": "Instant Experience\nWebsite\nCall\nMessaging Apps"
+  },
+  {
+   "fieldname": "creative_name",
+   "fieldtype": "Data",
+   "label": "Creative Name"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-02-02 13:04:09.658581",
+ "modified_by": "Administrator",
+ "module": "Ads Manager",
+ "name": "Ad Creative",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

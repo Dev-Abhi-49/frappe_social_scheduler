@@ -1,0 +1,3 @@
+Frappe Social
+Ads Manager
+API Credentials

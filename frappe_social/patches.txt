@@ -1,0 +1,5 @@
+# Patches for Frappe Social
+# Format: frappe_social.patches.patch_name
+
+# v1.0.0
+# Initial release - no patches needed

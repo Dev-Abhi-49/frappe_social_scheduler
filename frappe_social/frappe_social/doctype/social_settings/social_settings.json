@@ -1,0 +1,320 @@
+{
+ "actions": [],
+ "creation": "2025-12-15 12:16:23.649490",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "general_section",
+  "enable_scheduling",
+  "default_retry_count",
+  "retry_interval_minutes",
+  "column_break_general",
+  "enable_analytics",
+  "twitter_section",
+  "twitter_instructions",
+  "twitter_client_id",
+  "twitter_client_secret",
+  "column_break_twitter",
+  "twitter_api_key",
+  "twitter_api_secret",
+  "twitter_tier_section",
+  "twitter_tier",
+  "twitter_posts_today",
+  "twitter_daily_limit",
+  "linkedin_section",
+  "linkedin_instructions",
+  "linkedin_client_id",
+  "linkedin_client_secret",
+  "column_break_linkedin",
+  "linkedin_api_version",
+  "meta_section",
+  "meta_instructions",
+  "meta_app_id",
+  "meta_app_secret",
+  "column_break_meta",
+  "meta_api_version",
+  "instagram_section",
+  "instagram_posts_today",
+  "instagram_daily_limit",
+  "youtube_section",
+  "youtube_instructions",
+  "youtube_client_id",
+  "youtube_client_secret",
+  "column_break_youtube",
+  "youtube_api_key",
+  "youtube_quota_section",
+  "youtube_quota_limit",
+  "youtube_quota_used",
+  "youtube_quota_reset_date"
+ ],
+ "fields": [
+  {
+   "collapsible": 1,
+   "fieldname": "general_section",
+   "fieldtype": "Section Break",
+   "label": "General Settings"
+  },
+  {
+   "default": "1",
+   "fieldname": "enable_scheduling",
+   "fieldtype": "Check",
+   "label": "Enable Post Scheduling"
+  },
+  {
+   "default": "3",
+   "fieldname": "default_retry_count",
+   "fieldtype": "Int",
+   "label": "Default Retry Count"
+  },
+  {
+   "default": "5",
+   "fieldname": "retry_interval_minutes",
+   "fieldtype": "Int",
+   "label": "Retry Interval (minutes)"
+  },
+  {
+   "fieldname": "column_break_general",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "description": "Analytics refresh every hour automatically",
+   "fieldname": "enable_analytics",
+   "fieldtype": "Check",
+   "label": "Enable Analytics Fetching"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "twitter_section",
+   "fieldtype": "Section Break",
+   "label": "X (Twitter) API Credentials"
+  },
+  {
+   "fieldname": "twitter_instructions",
+   "fieldtype": "HTML",
+   "options": "<div class=\"alert alert-info\"><strong>How to get X (Twitter) API Keys:</strong><ol><li>Go to <a href=\"https://developer.twitter.com/en/portal/dashboard\" target=\"_blank\">Twitter Developer Portal</a></li><li>Create a Project and App (or use existing)</li><li>In App Settings \u2192 Keys and Tokens:<ul><li><strong>OAuth 2.0:</strong> Copy Client ID and Client Secret</li><li><strong>OAuth 1.0a:</strong> Generate API Key and API Secret (needed for media uploads)</li></ul></li><li>In App Settings \u2192 User authentication settings:<ul><li>Enable OAuth 2.0</li><li>Type: Web App</li><li>Callback URL: <code>https://your-site.com/api/method/frappe_social.frappe_social.api.oauth.callback_twitter</code></li><li>Scopes: tweet.read, tweet.write, users.read, offline.access</li></ul></li></ol><strong>Pricing:</strong> Free (17 posts/day), Basic $200/mo (100/day), Pro $5K/mo</div>"
+  },
+  {
+   "fieldname": "twitter_client_id",
+   "fieldtype": "Data",
+   "label": "Client ID (OAuth 2.0)"
+  },
+  {
+   "fieldname": "twitter_client_secret",
+   "fieldtype": "Password",
+   "label": "Client Secret (OAuth 2.0)"
+  },
+  {
+   "fieldname": "column_break_twitter",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "twitter_api_key",
+   "fieldtype": "Data",
+   "label": "API Key (OAuth 1.0a)"
+  },
+  {
+   "fieldname": "twitter_api_secret",
+   "fieldtype": "Password",
+   "label": "API Secret (OAuth 1.0a)"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "twitter_tier_section",
+   "fieldtype": "Section Break",
+   "label": "Twitter Tier & Limits"
+  },
+  {
+   "default": "Free",
+   "fieldname": "twitter_tier",
+   "fieldtype": "Select",
+   "label": "Twitter API Tier",
+   "options": "Free\nBasic\nPro\nEnterprise"
+  },
+  {
+   "default": "0",
+   "fieldname": "twitter_posts_today",
+   "fieldtype": "Int",
+   "label": "Posts Today",
+   "read_only": 1
+  },
+  {
+   "default": "17",
+   "fieldname": "twitter_daily_limit",
+   "fieldtype": "Int",
+   "label": "Daily Post Limit",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "linkedin_section",
+   "fieldtype": "Section Break",
+   "label": "LinkedIn API Credentials"
+  },
+  {
+   "fieldname": "linkedin_instructions",
+   "fieldtype": "HTML",
+   "options": "<div class=\"alert alert-info\"><strong>How to get LinkedIn API Keys:</strong><ol><li>Go to <a href=\"https://www.linkedin.com/developers/apps\" target=\"_blank\">LinkedIn Developers</a></li><li>Click \"Create App\" and fill in details</li><li>In Auth tab:<ul><li>Copy <strong>Client ID</strong> and <strong>Client Secret</strong></li><li>Add Redirect URL: <code>https://your-site.com/api/method/frappe_social.frappe_social.api.oauth.callback_linkedin</code></li></ul></li><li>In Products tab, request access to:<ul><li><strong>Share on LinkedIn</strong> (for posting)</li><li><strong>Sign In with LinkedIn using OpenID Connect</strong></li></ul></li><li>For Company Pages, also request:<ul><li><strong>Advertising API</strong> (includes rw_organization_admin)</li></ul></li></ol><strong>Rate Limits:</strong> 150 requests/day per member, 100K/day per app</div>"
+  },
+  {
+   "fieldname": "linkedin_client_id",
+   "fieldtype": "Data",
+   "label": "Client ID"
+  },
+  {
+   "fieldname": "linkedin_client_secret",
+   "fieldtype": "Password",
+   "label": "Client Secret"
+  },
+  {
+   "fieldname": "column_break_linkedin",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "202501",
+   "description": "Update monthly (format: YYYYMM)",
+   "fieldname": "linkedin_api_version",
+   "fieldtype": "Data",
+   "label": "API Version (YYYYMM)"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "meta_section",
+   "fieldtype": "Section Break",
+   "label": "Meta (Facebook/Instagram) API Credentials"
+  },
+  {
+   "fieldname": "meta_instructions",
+   "fieldtype": "HTML",
+   "options": "<div class=\"alert alert-info\"><strong>How to get Meta (Facebook/Instagram) API Keys:</strong><ol><li>Go to <a href=\"https://developers.facebook.com/apps/\" target=\"_blank\">Meta for Developers</a></li><li>Click \"Create App\" \u2192 Select \"Business\" type</li><li>In App Dashboard \u2192 Settings \u2192 Basic:<ul><li>Copy <strong>App ID</strong> and <strong>App Secret</strong></li></ul></li><li>Add Facebook Login product:<ul><li>Settings \u2192 Valid OAuth Redirect URIs:</li><li><code>https://your-site.com/api/method/frappe_social.frappe_social.api.oauth.callback_facebook</code></li><li><code>https://your-site.com/api/method/frappe_social.frappe_social.api.oauth.callback_instagram</code></li></ul></li><li>In App Review \u2192 Permissions, request:<ul><li><strong>pages_manage_posts</strong> (Facebook posting)</li><li><strong>pages_read_engagement</strong> (analytics)</li><li><strong>instagram_basic</strong>, <strong>instagram_content_publish</strong> (Instagram)</li><li><strong>business_management</strong> (required since Jan 2024)</li></ul></li></ol><strong>Note:</strong> Instagram requires a Business/Creator account linked to a Facebook Page.<br><strong>Limits:</strong> 200 calls/hour, Instagram max 25 posts/day</div>"
+  },
+  {
+   "fieldname": "meta_app_id",
+   "fieldtype": "Data",
+   "label": "Facebook App ID"
+  },
+  {
+   "fieldname": "meta_app_secret",
+   "fieldtype": "Password",
+   "label": "Facebook App Secret"
+  },
+  {
+   "fieldname": "column_break_meta",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "v21.0",
+   "fieldname": "meta_api_version",
+   "fieldtype": "Data",
+   "label": "Graph API Version"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "instagram_section",
+   "fieldtype": "Section Break",
+   "label": "Instagram Limits"
+  },
+  {
+   "default": "0",
+   "fieldname": "instagram_posts_today",
+   "fieldtype": "Int",
+   "label": "Posts Today",
+   "read_only": 1
+  },
+  {
+   "default": "25",
+   "fieldname": "instagram_daily_limit",
+   "fieldtype": "Int",
+   "label": "Daily Limit (Hard: 25)",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "youtube_section",
+   "fieldtype": "Section Break",
+   "label": "YouTube API Credentials"
+  },
+  {
+   "fieldname": "youtube_instructions",
+   "fieldtype": "HTML",
+   "options": "<div class=\"alert alert-info\"><strong>How to get YouTube API Keys:</strong><ol><li>Go to <a href=\"https://console.cloud.google.com/\" target=\"_blank\">Google Cloud Console</a></li><li>Create a new project (or select existing)</li><li>Enable APIs:<ul><li>APIs &amp; Services \u2192 Library \u2192 Search \"YouTube Data API v3\" \u2192 Enable</li><li>Also enable \"YouTube Analytics API\"</li></ul></li><li>Create OAuth 2.0 credentials:<ul><li>APIs &amp; Services \u2192 Credentials \u2192 Create Credentials \u2192 OAuth client ID</li><li>Application type: Web application</li><li>Authorized redirect URI: <code>https://your-site.com/api/method/frappe_social.frappe_social.api.oauth.callback_youtube</code></li><li>Copy <strong>Client ID</strong> and <strong>Client Secret</strong></li></ul></li><li>Create API Key (optional, for public data):<ul><li>Create Credentials \u2192 API Key</li></ul></li><li>Configure OAuth consent screen:<ul><li>Add scopes: youtube.upload, youtube.readonly, yt-analytics.readonly</li></ul></li></ol><strong>Quota:</strong> 10,000 units/day (video upload = 1,600 units, ~6 uploads/day)<br><strong>Note:</strong> Thumbnail uploads require phone-verified YouTube account</div>"
+  },
+  {
+   "fieldname": "youtube_client_id",
+   "fieldtype": "Data",
+   "label": "Client ID"
+  },
+  {
+   "fieldname": "youtube_client_secret",
+   "fieldtype": "Password",
+   "label": "Client Secret"
+  },
+  {
+   "fieldname": "column_break_youtube",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "For public data access only",
+   "fieldname": "youtube_api_key",
+   "fieldtype": "Data",
+   "label": "API Key (optional)"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "youtube_quota_section",
+   "fieldtype": "Section Break",
+   "label": "YouTube Quota Tracking"
+  },
+  {
+   "default": "10000",
+   "fieldname": "youtube_quota_limit",
+   "fieldtype": "Int",
+   "label": "Daily Quota Limit",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "youtube_quota_used",
+   "fieldtype": "Int",
+   "label": "Quota Used",
+   "read_only": 1
+  },
+  {
+   "fieldname": "youtube_quota_reset_date",
+   "fieldtype": "Date",
+   "label": "Quota Reset Date",
+   "read_only": 1
+  }
+ ],
+ "issingle": 1,
+ "links": [],
+ "modified": "2025-12-23 21:30:28.836976",
+ "modified_by": "Administrator",
+ "module": "Frappe Social",
+ "name": "Social Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Administrator",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

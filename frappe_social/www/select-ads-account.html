@@ -1,0 +1,253 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Select Ads Account{% endblock %}
+
+{% block page_content %}
+<div class="container" style="max-width: 600px; margin-top: 50px;">
+    <div class="card">
+        <div class="card-header">
+            <h4 class="mb-0">Connect <span id="platform-name">Ads Account</span></h4>
+        </div>
+
+        <div class="card-body">
+            <div id="authorized-by" class="alert alert-info d-none mb-3">
+                <strong>Logged in as:</strong> <span id="auth-user-name"></span>
+                <br><small class="text-muted">To use a different account, log out of Facebook first and try
+                    again.</small>
+            </div>
+
+            <p class="text-muted">
+                Select which ad account(s) you want to connect:
+            </p>
+
+            <div id="loading" class="text-center py-4">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2">Loading ad accounts...</p>
+            </div>
+
+            <div id="accounts-list" class="d-none"></div>
+
+            <div id="error-message" class="alert alert-danger d-none"></div>
+
+            <div id="action-buttons" class="mt-4 d-none">
+                <button id="connect-selected" class="btn btn-primary" disabled>
+                    Connect Selected
+                </button>
+                <button id="select-all" class="btn btn-secondary ml-2">
+                    Select All
+                </button>
+                <a href="/app/ads-account-integration" class="btn btn-light ml-2">
+                    Cancel
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center mt-3">
+        <small class="text-muted">
+            Want to connect a different account?
+            <a href="#" id="use-different-account">Log out of Facebook and try again</a>
+        </small>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+    $(document).ready(function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionKey = urlParams.get('session');
+        const platform = urlParams.get('platform');
+
+        if (!sessionKey) {
+            showError('Invalid session. Please try again.');
+            return;
+        }
+
+        $('#platform-name').text(platform || 'Account');
+
+        // Load ad accounts
+        frappe.call({
+            method: 'frappe_social.ads_manager.api.oauth.get_available_ad_accounts',
+            args: { session_key: sessionKey },
+            callback: function (r) {
+                $('#loading').addClass('d-none');
+
+                if (r.message && r.message.ad_accounts) {
+                    if (r.message.authorized_by) {
+                        $('#auth-user-name').text(r.message.authorized_by);
+                        $('#authorized-by').removeClass('d-none');
+                    }
+
+                    renderAccounts(r.message.ad_accounts);
+                    $('#action-buttons').removeClass('d-none');
+                } else {
+                    showError('No ad accounts found.');
+                }
+            },
+            error: function (r) {
+                $('#loading').addClass('d-none');
+                showError(r.message || 'Failed to load ad accounts.');
+            }
+        });
+
+        function renderAccounts(accounts) {
+            const container = $('#accounts-list');
+            container.empty().removeClass('d-none');
+
+            accounts.forEach(function (acct) {
+                const html = `
+                <div class="account-item card mb-2" data-index="${acct.index}">
+                    <div class="card-body p-3 d-flex align-items-center">
+                        <input type="checkbox"
+                               class="account-checkbox mr-3"
+                               data-index="${acct.index}"
+                               style="width:20px;height:20px;">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">${frappe.utils.xss_sanitise(acct.name)}</h6>
+                            <small class="text-muted">
+                                ID: ${acct.id}<br>
+                                Currency: ${acct.currency || 'N/A'} • 
+                                Status: ${acct.status || 'N/A'} • 
+                                Spent: ${acct.amount_spent || 0}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            `;
+                container.append(html);
+            });
+
+            // Checkbox change handler
+            $('.account-checkbox').on('change', function () {
+                updateButtons();
+            });
+
+            // Card click toggles checkbox
+            $('.account-item').on('click', function (e) {
+                if (!$(e.target).is('input')) {
+                    const cb = $(this).find('.account-checkbox');
+                    cb.prop('checked', !cb.prop('checked')).trigger('change');
+                }
+            });
+        }
+
+        function updateButtons() {
+            const checked = $('.account-checkbox:checked').length;
+            const total = $('.account-checkbox').length;
+
+            $('#connect-selected').prop('disabled', checked === 0);
+
+            if (checked === 0) {
+                $('#connect-selected').text('Connect Selected');
+            } else if (checked === 1) {
+                $('#connect-selected').text('Connect 1 Account');
+            } else {
+                $('#connect-selected').text(`Connect ${checked} Accounts`);
+            }
+
+            $('#select-all').text(
+                checked === total ? 'Deselect All' : 'Select All'
+            );
+        }
+
+        function showError(message) {
+            $('#error-message').text(message).removeClass('d-none');
+        }
+
+        // Select/Deselect all
+        $('#select-all').on('click', function () {
+            const boxes = $('.account-checkbox');
+            const allChecked = boxes.filter(':checked').length === boxes.length;
+            boxes.prop('checked', !allChecked).trigger('change');
+        });
+
+        // Connect selected accounts
+        $('#connect-selected').on('click', function () {
+            const selected = [];
+            $('.account-checkbox:checked').each(function () {
+                selected.push($(this).data('index'));
+            });
+
+            if (selected.length === 0) return;
+
+            $(this).prop('disabled', true)
+                .html('<span class="spinner-border spinner-border-sm mr-2"></span>Connecting...');
+
+            let success = 0;
+            let errors = 0;
+
+            function connectNext() {
+                if (selected.length === 0) {
+                        frappe.call({
+                        method: 'frappe_social.ads_manager.api.oauth.finalize_ad_account_connection',
+                        args: { session_key: sessionKey }
+                    });
+                
+                    frappe.show_alert({
+                        message: `Connected ${success} ad account(s)`,
+                        indicator: 'green'
+                    });
+                
+                    setTimeout(() => {
+                        window.location.href = '/app/ads-account-integration';
+                    }, 1500);
+                
+                    return;
+                }
+
+                const index = selected.shift();
+                frappe.call({
+                    method: 'frappe_social.ads_manager.api.oauth.connect_ad_account',
+                    args: {
+                        session_key: sessionKey,
+                        index: index
+                    },
+                    callback: function (r) {
+                        if (r.message) success++;
+                        connectNext();
+                    },
+                    error: function () {
+                        errors++;
+                        connectNext();
+                    }
+                });
+            }
+
+            connectNext();
+        });
+
+        // Different account handler
+        $('#use-different-account').on('click', function (e) {
+            e.preventDefault();
+            frappe.msgprint({
+                title: __('Use Different Account'),
+                message: __('To connect a different Facebook account:<br><br>' +
+                    '1. Open <a href="https://facebook.com" target="_blank">facebook.com</a> in a new tab<br>' +
+                    '2. Log out of your current Facebook account<br>' +
+                    '3. Come back here and click "Connect Account" again<br>' +
+                    '4. Log in with your other Facebook account'),
+                indicator: 'blue'
+            });
+        });
+    });
+</script>
+
+<style>
+    .account-item {
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 2px solid transparent;
+    }
+
+    .account-item:hover {
+        background-color: #f8f9fa;
+        border-color: #dee2e6;
+    }
+
+    .account-item:has(.account-checkbox:checked) {
+        border-color: #5e64ff;
+        background-color: #f8f9ff;
+    }
+</style>
+{% endblock %}

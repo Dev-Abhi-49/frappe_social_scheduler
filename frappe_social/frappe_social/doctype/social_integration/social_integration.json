@@ -1,0 +1,310 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "autoname": "format:{platform}-{profile_name}{page_name}{channel_name}",
+ "creation": "2025-12-15 12:16:24.021555",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "account_name",
+  "account_description",
+  "column_break_nbwc",
+  "enabled",
+  "platform",
+  "organization",
+  "connection_status",
+  "profile_image",
+  "profile_section",
+  "profile_name",
+  "page_name",
+  "channel_name",
+  "account_type",
+  "profile_url",
+  "profile_image_url",
+  "column_break_profile",
+  "profile_id",
+  "page_id",
+  "channel_id",
+  "followers_count",
+  "authorized_user_section",
+  "authorized_user_id",
+  "authorized_user_email",
+  "column_break_kfuc",
+  "authorized_user_name",
+  "oauth_section",
+  "access_token",
+  "token_expiry",
+  "oauth_1_token",
+  "column_break_oauth",
+  "refresh_token",
+  "page_access_token",
+  "oauth_1_secret",
+  "error_section",
+  "last_error",
+  "last_error_time"
+ ],
+ "fields": [
+  {
+   "fieldname": "platform",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Platform",
+   "options": "Twitter\nLinkedIn\nInstagram\nFacebook\nYouTube",
+   "placeholder": "Select Platform",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled"
+  },
+  {
+   "default": "Not Connected",
+   "fieldname": "connection_status",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Connection Status",
+   "options": "Not Connected\nConnected\nExpired\nError",
+   "read_only": 1
+  },
+  {
+   "fieldname": "profile_section",
+   "fieldtype": "Section Break",
+   "label": "Profile Information"
+  },
+  {
+   "depends_on": "eval:doc.platform === \"Instagram\"",
+   "fieldname": "profile_id",
+   "fieldtype": "Data",
+   "label": "Profile ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "profile_name",
+   "fieldtype": "Data",
+   "label": "Profile Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "profile_url",
+   "fieldtype": "Data",
+   "label": "Profile URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "profile_image_url",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Profile Image URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_profile",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "account_type",
+   "fieldtype": "Select",
+   "label": "Account Type",
+   "options": "Business\nPage\nOrganization\nChannel\nPersonal",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.platform === \"Facebook\"",
+   "fieldname": "page_id",
+   "fieldtype": "Data",
+   "label": "Page ID",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "followers_count",
+   "fieldtype": "Int",
+   "label": "Followers",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "description": "The user account that authorized this connection",
+   "fieldname": "authorized_user_section",
+   "fieldtype": "Section Break",
+   "label": "Authorized By"
+  },
+  {
+   "description": "Facebook/Google user ID who authorized this connection",
+   "fieldname": "authorized_user_id",
+   "fieldtype": "Data",
+   "label": "Authorized User ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "authorized_user_name",
+   "fieldtype": "Data",
+   "label": "Authorized User Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "authorized_user_email",
+   "fieldtype": "Data",
+   "label": "Authorized User Email",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "oauth_section",
+   "fieldtype": "Section Break",
+   "hidden": 1,
+   "label": "OAuth Tokens"
+  },
+  {
+   "fieldname": "access_token",
+   "fieldtype": "Password",
+   "label": "Access Token"
+  },
+  {
+   "fieldname": "refresh_token",
+   "fieldtype": "Password",
+   "label": "Refresh Token",
+   "read_only": 1
+  },
+  {
+   "fieldname": "token_expiry",
+   "fieldtype": "Datetime",
+   "label": "Token Expiry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_oauth",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "oauth_1_token",
+   "fieldtype": "Password",
+   "label": "OAuth 1.0a Token",
+   "read_only": 1
+  },
+  {
+   "fieldname": "oauth_1_secret",
+   "fieldtype": "Password",
+   "label": "OAuth 1.0a Secret",
+   "read_only": 1
+  },
+  {
+   "fieldname": "page_access_token",
+   "fieldtype": "Text",
+   "label": "Page Access Token"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "error_section",
+   "fieldtype": "Section Break",
+   "hidden": 1,
+   "label": "Error Information"
+  },
+  {
+   "fieldname": "last_error",
+   "fieldtype": "Small Text",
+   "label": "Last Error",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_error_time",
+   "fieldtype": "Datetime",
+   "label": "Last Error Time",
+   "read_only": 1
+  },
+  {
+   "fieldname": "organization",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Organization",
+   "options": "CRM Organization",
+   "placeholder": "Select Organization"
+  },
+  {
+   "fieldname": "column_break_nbwc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_kfuc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "account_name",
+   "fieldtype": "Data",
+   "label": "Account Name",
+   "placeholder": "Enter Account Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "account_description",
+   "fieldtype": "Small Text",
+   "label": "Account Description",
+   "placeholder": "...............!"
+  },
+  {
+   "fieldname": "profile_image",
+   "fieldtype": "Attach Image",
+   "hidden": 1,
+   "label": "Profile Image"
+  },
+  {
+   "fieldname": "page_name",
+   "fieldtype": "Data",
+   "label": "Page Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "channel_name",
+   "fieldtype": "Data",
+   "label": "Channel Name"
+  },
+  {
+   "fieldname": "channel_id",
+   "fieldtype": "Data",
+   "label": "Channel ID"
+  }
+ ],
+ "image_field": "profile_image",
+ "links": [],
+ "modified": "2026-02-07 15:43:00.517572",
+ "modified_by": "Administrator",
+ "module": "Frappe Social",
+ "name": "Social Integration",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Administrator",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Scheduler",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
