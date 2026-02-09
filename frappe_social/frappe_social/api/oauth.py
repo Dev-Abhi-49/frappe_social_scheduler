@@ -388,12 +388,18 @@ def _handle_meta_callback(platform: str):
     if not approved_pages:
         return _oauth_error_redirect("No Facebook Pages found. Create a Page first.")
 
-    frappe.set_user(cache_data["user"])
+    user = cache_data.get("user")
+
+    if not user:
+        return _oauth_error_redirect("Your login session expired. Please try connecting again.")
+
+    frappe.set_user(user)
     
-    # For Instagram, get linked IG accounts
+    # For Instagram, get ONLY user-selected IG accounts (Meta filters this automatically)
     if platform == "Instagram":
-        ig_pages = []
-        for page in pages:
+        selected_ig_accounts = []
+
+        for page in pages:  # pages already filtered by Meta permissions
             ig_data = requests.get(
                 f"https://graph.facebook.com/{api_version}/{page['id']}",
                 params={
@@ -401,48 +407,50 @@ def _handle_meta_callback(platform: str):
                     "fields": "instagram_business_account{id,username,profile_picture_url,followers_count}",
                 },
             ).json()
-            if ig_data.get("instagram_business_account"):
-                ig = ig_data["instagram_business_account"]
-                ig_pages.append(
-                    {
-                        "page_id": page["id"],
-                        "page_name": page["name"],
-                        "page_access_token": page["access_token"],
-                        "instagram_id": ig["id"],
-                        "instagram_username": ig.get("username", ""),
-                        "followers_count": ig.get("followers_count", 0),
-                        "profile_picture_url": ig.get("profile_picture_url", ""),
-                    }
-                )
-        if not ig_pages:
-            return _oauth_error_redirect("No Instagram Business accounts found. Make sure your Instagram account is linked to a Facebook Page and converted to a Business account.")
-        
-        for ig_page in ig_pages:
+
+            ig = ig_data.get("instagram_business_account")
+            if ig:
+                selected_ig_accounts.append({
+                    "page_id": page["id"],
+                    "page_name": page["name"],
+                    "page_access_token": page["access_token"],
+                    "instagram_id": ig["id"],
+                    "instagram_username": ig.get("username"),
+                    "followers_count": ig.get("followers_count", 0),
+                    "profile_picture_url": ig.get("profile_picture_url"),
+                })
+
+        if not selected_ig_accounts:
+            return _oauth_error_redirect(
+                "No Instagram Business account selected. Make sure you selected an Instagram account in Meta popup."
+            )
+
+        # ✅ Save only what user selected (Meta already filtered this list)
+        for ig in selected_ig_accounts:
             try:
                 integration = _save_integration(
-                    platform=platform,
-                    profile_id=ig_page["instagram_id"],
-                    profile_name=ig_page["instagram_username"],
-                    profile_image=ig_page.get("profile_picture_url"),
-                    page_access_token=ig_page["page_access_token"],
+                    platform="Instagram",
+                    profile_id=ig["instagram_id"],
+                    profile_name=ig["instagram_username"],
+                    profile_image=ig.get("profile_picture_url"),
+                    page_access_token=ig["page_access_token"],
                     access_token=user_token,
                     expires_in=expires_in,
                     account_type="Business",
                     authorized_user_id=me_data.get("id"),
                     authorized_user_name=me_data.get("name"),
                     authorized_user_email=me_data.get("email"),
-                    followers_count=ig_page.get("followers_count", 0),
-                    account_name=cache_data.get("account_name") or ig_page["instagram_username"],  # Fallback added
+                    followers_count=ig.get("followers_count", 0),
+                    account_name=cache_data.get("account_name") or ig["instagram_username"],
                     account_description=cache_data.get("account_description"),
                     organization=cache_data.get("organization"),
                 )
                 frappe.logger().info(f"Instagram integration created: {integration.name}")
             except Exception as e:
-                error_msg = f"Failed to save Instagram page {ig_page.get('instagram_username')}: {str(e)}"
-                frappe.logger().error(error_msg)
                 frappe.log_error(frappe.get_traceback(), "Instagram Integration Creation Failed")
+                error_msg = f"Failed to save Instagram account {ig.get('instagram_username')}: {str(e)}"
+                frappe.logger().error(error_msg)
                 continue
-                
     else:
         for page in approved_pages:
             try:
@@ -472,7 +480,7 @@ def _handle_meta_callback(platform: str):
                 continue
         
     frappe.cache().delete_value(f"oauth_state_{state}")
-    return _oauth_success_redirect("new")
+    return _oauth_success_redirect(integration.name)
 
 def _save_integration(
     platform: str,
@@ -701,8 +709,8 @@ def _oauth_error_redirect(message: str):
     frappe.local.response["location"] = f"/app/social-integration?error={frappe.utils.quoted(message)}"
 
 
-def _oauth_success_redirect(integration_name: str, platform: str = None):
+def _oauth_success_redirect(integration_name: str):
     """Render success page that auto-closes popup"""
-    
+    # Use safe parameter naming to avoid Frappe field validation issues
     frappe.local.response["type"] = "redirect"
-    frappe.local.response["location"] = f"/app/social-integration?oauth_success={integration_name}&platform={platform or ''}"
+    frappe.local.response["location"] = f"/app/social-integration"

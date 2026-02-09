@@ -15,6 +15,25 @@ frappe.listview_settings['Social Integration'] = {
     },
 
     onload: function (listview) {
+        // Check for OAuth completion
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('oauth_state') === 'complete') {
+            const integrationName = urlParams.get('name');
+            const platform = urlParams.get('platform');
+            
+            if (integrationName) {
+                frappe.show_alert({
+                    message: __('Account connected successfully'),
+                    indicator: 'green'
+                }, 5);
+                
+                // Refresh the list
+                listview.refresh();
+                
+                // Clean up URL
+                window.history.replaceState({}, document.title, '/app/social-integration');
+            }
+        }
         // Remove the default "+ Add Social Integration" button
         listview.page.clear_primary_action();
 

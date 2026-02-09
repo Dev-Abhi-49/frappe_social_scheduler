@@ -43,8 +43,8 @@ frappe.ui.form.on('Social Integration', {
     connect_account: function (frm) {
         let popup = null;
         let checkInterval = null;
-        
-        const messageHandler = function(event) {
+
+        const messageHandler = function (event) {
             if (event.origin !== window.location.origin) return;
 
             if (event.data && event.data.type === 'oauth_complete') {
@@ -89,7 +89,7 @@ frappe.ui.form.on('Social Integration', {
                         'oauth_popup',
                         `width=${width},height=${height},left=${left},top=${top}`
                     );
-                
+
                     if (!popup) {
                         frappe.msgprint(__('Please allow popups'));
                         window.removeEventListener('message', messageHandler);
@@ -97,7 +97,7 @@ frappe.ui.form.on('Social Integration', {
                     }
 
                     // Poll popup location
-                    checkInterval = setInterval(function() {
+                    checkInterval = setInterval(function () {
                         if (!popup || popup.closed) {
                             clearInterval(checkInterval);
                             window.removeEventListener('message', messageHandler);
