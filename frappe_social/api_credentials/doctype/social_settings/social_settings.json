@@ -1,6 +1,5 @@
 {
  "actions": [],
- "allow_copy": 1,
  "creation": "2025-12-15 12:16:23.649490",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -281,10 +280,9 @@
    "read_only": 1
   }
  ],
- "hide_toolbar": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-02-04 21:07:20.094344",
+ "modified": "2026-02-07 21:36:11.002224",
  "modified_by": "Administrator",
  "module": "API Credentials",
  "name": "Social Settings",
@@ -308,9 +306,12 @@
    "write": 1
   }
  ],
+ "read_only": 1,
  "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
- "track_changes": 1
+ "track_changes": 1,
+ "track_seen": 1,
+ "track_views": 1
 }

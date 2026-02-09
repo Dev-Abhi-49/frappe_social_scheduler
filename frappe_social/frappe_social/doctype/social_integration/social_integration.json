@@ -20,12 +20,12 @@
   "channel_name",
   "account_type",
   "profile_url",
-  "profile_image_url",
   "column_break_profile",
   "profile_id",
   "page_id",
   "channel_id",
   "followers_count",
+  "profile_image_url",
   "authorized_user_section",
   "authorized_user_id",
   "authorized_user_email",
@@ -155,13 +155,13 @@
    "collapsible": 1,
    "fieldname": "oauth_section",
    "fieldtype": "Section Break",
-   "hidden": 1,
    "label": "OAuth Tokens"
   },
   {
    "fieldname": "access_token",
    "fieldtype": "Password",
-   "label": "Access Token"
+   "label": "Access Token",
+   "read_only": 1
   },
   {
    "fieldname": "refresh_token",
@@ -193,8 +193,9 @@
   },
   {
    "fieldname": "page_access_token",
-   "fieldtype": "Text",
-   "label": "Page Access Token"
+   "fieldtype": "Password",
+   "label": "Page Access Token",
+   "read_only": 1
   },
   {
    "collapsible": 1,
@@ -260,17 +261,19 @@
   {
    "fieldname": "channel_name",
    "fieldtype": "Data",
-   "label": "Channel Name"
+   "label": "Channel Name",
+   "read_only": 1
   },
   {
    "fieldname": "channel_id",
    "fieldtype": "Data",
-   "label": "Channel ID"
+   "label": "Channel ID",
+   "read_only": 1
   }
  ],
  "image_field": "profile_image",
  "links": [],
- "modified": "2026-02-07 15:43:00.517572",
+ "modified": "2026-02-08 16:56:01.620281",
  "modified_by": "Administrator",
  "module": "Frappe Social",
  "name": "Social Integration",

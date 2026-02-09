@@ -13,7 +13,7 @@
  "is_hidden": 0,
  "label": "Ads Manage",
  "links": [],
- "modified": "2026-02-07 21:17:08.336623",
+ "modified": "2026-02-07 21:42:59.518553",
  "modified_by": "Administrator",
  "module": "Ads Manager",
  "name": "Ads Manage",
@@ -36,6 +36,14 @@
   {
    "color": "Grey",
    "doc_view": "List",
+   "label": "Ad Post",
+   "link_to": "Ad Post",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
    "label": "Marketing Campaign",
    "link_to": "Marketing Campaign",
    "stats_filter": "[]",
@@ -46,14 +54,6 @@
    "doc_view": "List",
    "label": "Ad Set",
    "link_to": "Ad Set",
-   "stats_filter": "[]",
-   "type": "DocType"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Ad Post",
-   "link_to": "Social Post",
    "stats_filter": "[]",
    "type": "DocType"
   }

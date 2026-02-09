@@ -1,0 +1,319 @@
+{
+ "actions": [],
+ "autoname": "format:{DD}-{MM}-{YY}-{ad_name}",
+ "creation": "2026-02-07 21:38:49.261390",
+ "default_view": "List",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_iqyl",
+  "ad_name",
+  "platform",
+  "campagin",
+  "column_break_zcqm",
+  "organization",
+  "select_ad_account",
+  "status",
+  "account_details_section",
+  "html",
+  "section_break_pvpm",
+  "select_ad_set",
+  "column_break_gqdm",
+  "selected_facebook_page",
+  "section_break_mdxt",
+  "ad_creative",
+  "content_section",
+  "content",
+  "character_limit",
+  "column_break_fqal",
+  "media",
+  "youtube_section",
+  "video_title",
+  "video_description",
+  "column_break_yt",
+  "is_youtube_short",
+  "thumbnail",
+  "schedule_post_section",
+  "scheduled_time",
+  "column_break_owve",
+  "ad_id",
+  "retry_section",
+  "retry_count",
+  "last_retry_time",
+  "column_break_retry",
+  "error_log"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_iqyl",
+   "fieldtype": "Section Break",
+   "hide_border": 1
+  },
+  {
+   "bold": 1,
+   "fieldname": "ad_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Ad Name",
+   "placeholder": "Name (e.g., New Year Post)",
+   "reqd": 1
+  },
+  {
+   "bold": 1,
+   "fieldname": "platform",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Platform",
+   "options": "\nFacebook\nInstagram\nYouTube\nTwitter\nLinkedin",
+   "placeholder": "Select Platform",
+   "reqd": 1
+  },
+  {
+   "fieldname": "campagin",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Campagin",
+   "options": "Marketing Campaign",
+   "placeholder": "Select Campagin",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_zcqm",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "organization",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Organization",
+   "options": "CRM Organization",
+   "placeholder": "Select Organization",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.is_ad",
+   "fieldname": "select_ad_account",
+   "fieldtype": "Link",
+   "label": "Select Ad Account",
+   "options": "Ads Account Integration"
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Draft\nScheduled\nPublishing\nPublished\nFailed\nCancelled",
+   "read_only": 1
+  },
+  {
+   "collapsible_depends_on": "eval:doc.account",
+   "depends_on": "eval:doc.account;",
+   "fieldname": "account_details_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "html",
+   "fieldtype": "HTML",
+   "label": "HTML"
+  },
+  {
+   "depends_on": "eval:doc.is_ad;",
+   "fieldname": "section_break_pvpm",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "select_ad_set",
+   "fieldtype": "Link",
+   "label": "Select Ad Set",
+   "options": "Ad Set"
+  },
+  {
+   "fieldname": "column_break_gqdm",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "selected_facebook_page",
+   "fieldtype": "Data",
+   "label": "Selected Facebook Page",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.is_ad",
+   "fieldname": "section_break_mdxt",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "ad_creative",
+   "fieldtype": "Table",
+   "label": "Ad Creative",
+   "options": "Ad Creative"
+  },
+  {
+   "fieldname": "content_section",
+   "fieldtype": "Section Break",
+   "label": "Post Details"
+  },
+  {
+   "fieldname": "content",
+   "fieldtype": "Text Editor",
+   "label": "Content",
+   "placeholder": "What's in your mind......",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.content;",
+   "fieldname": "character_limit",
+   "fieldtype": "HTML",
+   "label": "Character Limit"
+  },
+  {
+   "fieldname": "column_break_fqal",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "media",
+   "fieldtype": "Table",
+   "label": "Media",
+   "options": "Social Post Media"
+  },
+  {
+   "depends_on": "eval:doc.platform === 'YouTube'",
+   "fieldname": "youtube_section",
+   "fieldtype": "Section Break",
+   "label": "YouTube Settings"
+  },
+  {
+   "fieldname": "video_title",
+   "fieldtype": "Data",
+   "label": "Video Title"
+  },
+  {
+   "fieldname": "video_description",
+   "fieldtype": "Small Text",
+   "hidden": 1,
+   "label": "Video Description"
+  },
+  {
+   "fieldname": "column_break_yt",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_youtube_short",
+   "fieldtype": "Check",
+   "label": "Is YouTube Short"
+  },
+  {
+   "fieldname": "thumbnail",
+   "fieldtype": "Attach Image",
+   "label": "Thumbnail"
+  },
+  {
+   "fieldname": "schedule_post_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "scheduled_time",
+   "fieldtype": "Datetime",
+   "in_standard_filter": 1,
+   "label": "Schedule Time",
+   "placeholder": "Set Date and Time"
+  },
+  {
+   "fieldname": "column_break_owve",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "\u2713 Ad Published",
+   "fieldname": "ad_id",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Ad ID",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "collapsible_depends_on": "eval:doc.status === 'Failed';",
+   "fieldname": "retry_section",
+   "fieldtype": "Section Break",
+   "hidden": 1,
+   "label": "Retry Information"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "0",
+   "fieldname": "retry_count",
+   "fieldtype": "Int",
+   "label": "Retry Count",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "last_retry_time",
+   "fieldtype": "Datetime",
+   "label": "Last Retry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_retry",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "error_log",
+   "fieldtype": "Small Text",
+   "label": "Error Log",
+   "read_only": 1
+  }
+ ],
+ "hide_toolbar": 1,
+ "links": [],
+ "make_attachments_public": 1,
+ "modified": "2026-02-08 14:59:46.036068",
+ "modified_by": "Administrator",
+ "module": "Ads Manager",
+ "name": "Ad Post",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Administrator",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Scheduler",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

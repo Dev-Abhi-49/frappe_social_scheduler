@@ -69,77 +69,34 @@ frappe.ui.form.on('Social Post', {
         }
 
         let checked = 0;
-        if (frm.doc.is_fb_post) checked++;
-        if (frm.doc.is_fb_story) checked++;
-        if (frm.doc.is_fb_reel) checked++;
-        if (frm.doc.is_ig_post) checked++;
-        if (frm.doc.is_ig_reel) checked++;
-        if (frm.doc.is_ig_story) checked++;
+        if (frm.doc.is_post) checked++;
+        if (frm.doc.is_story) checked++;
+        if (frm.doc.is_reel) checked++;
         if (checked > 1) {
             // Optionally auto-resolve (e.g., prioritize one) or alert
             frappe.msgprint('Only one option allowed. Resetting others.');
-            frm.set_value('is_ig_post', 0);
-            frm.set_value('is_ig_reel', 0);
-            frm.set_value('is_ig_story', 0);
-            frm.set_value('is_fb_post', 0);
-            frm.set_value('is_fb_story', 0);
-            frm.set_value('is_fb_reel', 0);
+            frm.set_value('is_story', 0);
+            frm.set_value('is_reel', 0);
         }
     },
 
 
-    is_fb_post(frm) {
-        if (frm.doc.is_fb_post) {
-            frm.set_value('is_fb_story', 0);
-            frm.set_value('is_fb_reel', 0);
-            frm.set_value('is_ig_post', 0);
-            frm.set_value('is_ig_reel', 0);
-            frm.set_value('is_ig_story', 0);
+    is_post(frm) {
+        if (frm.doc.is_post) {
+            frm.set_value('is_story', 0);
+            frm.set_value('is_reel', 0);
         }
     },
-    is_fb_story(frm) {
-        if (frm.doc.is_fb_story) {
-            frm.set_value('is_fb_post', 0);
-            frm.set_value('is_fb_reel', 0);
-            frm.set_value('is_ig_post', 0);
-            frm.set_value('is_ig_reel', 0);
-            frm.set_value('is_ig_story', 0);
+    is_story(frm) {
+        if (frm.doc.is_story) {
+            frm.set_value('is_post', 0);
+            frm.set_value('is_reel', 0);
         }
     },
-    is_fb_reel(frm) {
-        if (frm.doc.is_fb_reel) {
-            frm.set_value('is_fb_post', 0);
-            frm.set_value('is_fb_story', 0);
-            frm.set_value('is_ig_post', 0);
-            frm.set_value('is_ig_reel', 0);
-            frm.set_value('is_ig_story', 0);
-        }
-    },
-    is_ig_post(frm) {
-        if (frm.doc.is_ig_post) {
-            frm.set_value('is_fb_post', 0);
-            frm.set_value('is_fb_story', 0);
-            frm.set_value('is_fb_reel', 0);
-            frm.set_value('is_ig_reel', 0);
-            frm.set_value('is_ig_story', 0);
-        }
-    },
-    is_ig_reel(frm) {
-        if (frm.doc.is_ig_reel) {
-            frm.set_value('is_fb_post', 0);
-            frm.set_value('is_fb_story', 0);
-            frm.set_value('is_fb_reel', 0);
-            frm.set_value('is_ig_post', 0);
-            frm.set_value('is_ig_story', 0);
-        }
-    },
-    is_ig_story(frm) {
-        if (frm.doc.is_ig_story) {
-            frm.set_value('is_fb_post', 0);
-            frm.set_value('is_fb_story', 0);
-            frm.set_value('is_fb_reel', 0);
-            frm.set_value('is_ig_post', 0);
-            frm.set_value('is_ig_reel', 0);
+    is_reel(frm) {
+        if (frm.doc.is_reel) {
+            frm.set_value('is_post', 0);
+            frm.set_value('is_story', 0);
         }
     },
 
@@ -314,7 +271,6 @@ frappe.ui.form.on('Social Post', {
             }, __('Schedule Post'));
         }
     },
-
     reschedule_post: function (frm) {
         function show_reschedule_prompt() {
             frappe.prompt({

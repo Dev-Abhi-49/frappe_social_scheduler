@@ -14,15 +14,20 @@ from frappe_social.frappe_social.providers.base import BaseProvider, PublishResu
 
 class YouTubeProvider(BaseProvider):
     PLATFORM = "YouTube"
-    MAX_CONTENT_LENGTH = 5000  # Description limit
+    MAX_CONTENT_LENGTH = 5000  
     SUPPORTS_VIDEO = True
     UPLOAD_QUOTA_COST = 1600
+    MAX_MEDIA_COUNT = 1
+    ALLOWED_IMAGE_TYPES = []
+    ALLOWED_VIDEO_TYPES = ["video/mp4", "video/mov"]
+    ALLOWS_MULTI_VIDEO = False
+    MAX_VIDEO_SIZE = 256 * 1024 * 1024 * 1024
 
     def __init__(self, integration_name: str = None):
         super().__init__(integration_name)
 
-    def publish_post(self, title: str = None, description: str = None, media_files: list = None,
-            tags: list = None, is_short: bool = False, **kwargs) -> PublishResult:
+    def publish_post(self, content: str = None, media_files: list = None, video_title: str = None,
+            tags: list = None, is_short: bool = False, is_video: bool = False, is_comunity_post: bool = False, **kwargs) -> PublishResult:
         """Upload video to YouTube"""
         if not self.integration:
             return PublishResult(success=False, error_message="No integration configured")
@@ -49,8 +54,8 @@ class YouTubeProvider(BaseProvider):
             # Prepare metadata
             metadata = {
                 "snippet": {
-                    "title": title or "Untitled Video",
-                    "description": description or "",
+                    "title": video_title or "Untitled Video",
+                    "description": content or "",
                     "tags": video_tags,
                     "categoryId": "22"  # People & Blogs
                 },
