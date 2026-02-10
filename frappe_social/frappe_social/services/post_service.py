@@ -70,7 +70,7 @@ class PostService:
                     "post_id": result.post_id,
                     "post_url": result.post_url,
                     "error_log": None,
-                    "published_at": now_datetime()
+                    # "published_at": now_datetime()
                 })
             else:
                 post.db_set({
