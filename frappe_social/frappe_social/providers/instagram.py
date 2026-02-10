@@ -30,7 +30,67 @@ class InstagramProvider(BaseProvider):
         super().__init__(integration_name)
         self.api_version = self.settings.meta_api_version or "v21.0"
         self.api_base = f"https://graph.facebook.com/{self.api_version}"
+        
+    def get_full_path(self, file_path: str) -> str:
+        """Get absolute local file path - consistent with provider logic"""
+        if not file_path:
+            raise ValueError("Empty file path")
+        file_path = file_path.strip()
+        mappings = (
+            ("/private/files/", ("private", "files")),
+            ("/public/files/", ("public", "files")),
+            ("/files/", ("public", "files")),
+        )
+        for prefix, site_path in mappings:
+            if file_path.startswith(prefix):
+                relative = file_path[len(prefix) :]
+                return frappe.get_site_path(*site_path, relative)
+        return frappe.get_site_path(file_path.lstrip("/"))
+    
+    def _get_punlic_url(self, file_path: str) -> str:
+        """Get publicly accessible URL for the file"""
+        if file_path.startswith("http"):
+            return file_path
+        return frappe.utils.get_url(file_path)
 
+    def _is_video(self, file_path: str) -> bool:
+        """Check if file is a video"""
+        return file_path.lower().endswith((".mp4", ".mov"))
+
+    def _is_image(self, file_path: str) -> bool:
+        """Check if file is an image"""
+        return file_path.lower().endswith((".jpg", ".jpeg", ".png"))
+    
+    def _get_video_duration(self, path: str) -> float:
+        """Return video duration in seconds using ffprobe"""
+        import subprocess, json
+
+        cmd = [
+            "ffprobe", "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "json",
+            path,
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        data = json.loads(result.stdout)
+        return float(data["format"]["duration"])
+    
+    def _get_video_dimensions(self, path: str):
+        """Return (width, height) of the video using ffprobe"""
+        import subprocess, json
+
+        cmd = [
+            "ffprobe", "-v", "error",
+            "-select_streams", "v:0",
+            "-show_entries", "stream=width,height",
+            "-of", "json",
+            path,
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        data = json.loads(result.stdout)
+        stream = data["streams"][0]
+        return int(stream["width"]), int(stream["height"])
+    
     def publish_post(self, content: str = None, media_files: list = None, **kwargs) -> PublishResult:
         """
         Main publish method that routes to appropriate handler based on content type
@@ -39,31 +99,158 @@ class InstagramProvider(BaseProvider):
             return PublishResult(success=False, error_message="No integration configured")
 
         page_token = self.integration.get_password("page_access_token")
-        ig_user_id = self.integration.profile_id
+        instagram_id = self.integration.profile_id
 
-        if not page_token or not ig_user_id:
+        if not page_token or not instagram_id:
             return PublishResult(success=False, error_message="Missing credentials")
 
         # Determine content type from kwargs
-        is_story = kwargs.get("is_story", False)
-        is_reel = kwargs.get("is_reel", False)
-        is_post = kwargs.get("is_post", True)  # Default to regular post
-
+        is_ig_story = kwargs.get("is_ig_story", False)
+        is_ig_reel = kwargs.get("is_ig_reel", False)
+        is_ig_post = kwargs.get("is_ig_post", False)
+        
+        media_files = media_files or []
         try:
             # Route to appropriate handler
-            if is_story:
-                return self._publish_story(content, media_files, page_token, ig_user_id)
-            elif is_reel:
-                return self._publish_reel(content, media_files, page_token, ig_user_id)
+            if is_ig_story:
+                return self._publish_story(content, media_files, page_token, instagram_id, **kwargs)
+            elif is_ig_reel:
+                return self._publish_reel(content, media_files, page_token, instagram_id, **kwargs)
             else:
-                return self._publish_feed_post(content, media_files, page_token, ig_user_id)
+                return self._publish_feed_post(content, media_files, page_token, instagram_id, **kwargs)
 
         except Exception as e:
             frappe.log_error(title="Instagram Publish Error", message=f"{str(e)}\n{frappe.get_traceback()}")
             return PublishResult(success=False, error_message=str(e))
+        
+    def _publish_feed_post(
+        self, content: str, media_files: list, page_token: str, ig_user_id: str
+    ) -> PublishResult:
+        """
+        Publish regular Instagram Feed Post
+        Supports: single image, single video, or carousel (multiple images)
+        """
+        if not media_files:
+            return PublishResult(success=False, error_message="Instagram feed posts require media")
+
+        try:
+            container_id = None
+            is_carousel = len(media_files) > 1
+
+            # CAROUSEL (Multiple Images)
+            if is_carousel:
+                child_container_ids = []
+
+                for media_item in media_files:
+                    file_url = media_item.file_url if hasattr(media_item, "file_url") else media_item
+
+                    if not self._is_image(file_url):
+                        return PublishResult(
+                            success=False, error_message="Carousels currently support images only"
+                        )
+
+                    if file_url.lower().endswith(".png"):
+                        file_url = self._convert_png_to_jpeg(file_url)
+
+                    public_url = self._get_public_url(file_url)
+
+                    item_data = {
+                        "image_url": public_url,
+                        "is_carousel_item": "true",
+                        "access_token": page_token,
+                    }
+
+                    res = requests.post(f"{self.api_base}/{ig_user_id}/media", data=item_data, timeout=60)
+
+                    if res.status_code != 200:
+                        return self._handle_error(res, "Carousel item creation failed")
+
+                    item_container_id = res.json().get("id")
+
+                    # Wait for each carousel item to be ready
+                    if not self._wait_for_media_processing(
+                        item_container_id, page_token, max_retries=15, delay=2
+                    ):
+                        return PublishResult(
+                            success=False,
+                            error_message=f"Carousel item {len(child_container_ids)+1} processing timeout",
+                        )
+
+                    child_container_ids.append(item_container_id)
+
+                # Create carousel parent container
+                carousel_data = {
+                    "media_type": "CAROUSEL",
+                    "children": ",".join(child_container_ids),
+                    "caption": content or "",
+                    "access_token": page_token,
+                }
+
+                parent_res = requests.post(
+                    f"{self.api_base}/{ig_user_id}/media", data=carousel_data, timeout=60
+                )
+
+                if parent_res.status_code != 200:
+                    return self._handle_error(parent_res, "Carousel parent creation failed")
+
+                container_id = parent_res.json().get("id")
+
+            # SINGLE MEDIA (Image or Video)
+            else:
+                file_doc = media_files[0]
+                file_url = file_doc.file_url if hasattr(file_doc, "file_url") else file_doc
+
+                if self._is_video(file_url):
+                    # Single video post
+                    public_url = self._get_public_url(file_url)
+
+                    video_data = {
+                        "media_type": "VIDEO",
+                        "video_url": public_url,
+                        "caption": content or "",
+                        "access_token": page_token,
+                    }
+
+                    res = requests.post(f"{self.api_base}/{ig_user_id}/media", data=video_data, timeout=30)
+
+                    if res.status_code != 200:
+                        return self._handle_error(res, "Video container creation failed")
+
+                    container_id = res.json().get("id")
+
+                    # Wait for video processing
+                    if not self._wait_for_media_processing(container_id, page_token, max_retries=60, delay=6):
+                        return PublishResult(success=False, error_message="Video processing timeout")
+
+                else:
+                    # Single image post
+                    if file_url.lower().endswith(".png"):
+                        file_url = self._convert_png_to_jpeg(file_url)
+
+                    public_url = self._get_public_url(file_url)
+
+                    image_data = {
+                        "image_url": public_url,
+                        "caption": content or "",
+                        "access_token": page_token,
+                    }
+
+                    res = requests.post(f"{self.api_base}/{ig_user_id}/media", data=image_data, timeout=30)
+
+                    if res.status_code != 200:
+                        return self._handle_error(res, "Image container creation failed")
+
+                    container_id = res.json().get("id")
+
+            # Publish the container
+            return self._publish_container(container_id, page_token, ig_user_id, "Post")
+
+        except Exception as e:
+            frappe.log_error(title="Instagram Feed Post Error", message=f"{str(e)}\n{frappe.get_traceback()}")
+            return PublishResult(success=False, error_message=str(e))
 
     def _publish_story(
-        self, content: str, media_files: list, page_token: str, ig_user_id: str
+        self, content: str, media_files: list, page_token: str, instagram_id: str
     ) -> PublishResult:
         """
         Publish Instagram Story (24-hour content)
@@ -207,131 +394,7 @@ class InstagramProvider(BaseProvider):
         except Exception as e:
             return PublishResult(success=False, error_message=f"Reel creation failed: {str(e)}")
 
-    def _publish_feed_post(
-        self, content: str, media_files: list, page_token: str, ig_user_id: str
-    ) -> PublishResult:
-        """
-        Publish regular Instagram Feed Post
-        Supports: single image, single video, or carousel (multiple images)
-        """
-        if not media_files:
-            return PublishResult(success=False, error_message="Instagram feed posts require media")
-
-        try:
-            container_id = None
-            is_carousel = len(media_files) > 1
-
-            # CAROUSEL (Multiple Images)
-            if is_carousel:
-                child_container_ids = []
-
-                for media_item in media_files:
-                    file_url = media_item.file_url if hasattr(media_item, "file_url") else media_item
-
-                    if not self._is_image(file_url):
-                        return PublishResult(
-                            success=False, error_message="Carousels currently support images only"
-                        )
-
-                    if file_url.lower().endswith(".png"):
-                        file_url = self._convert_png_to_jpeg(file_url)
-
-                    public_url = self._get_public_url(file_url)
-
-                    item_data = {
-                        "image_url": public_url,
-                        "is_carousel_item": "true",
-                        "access_token": page_token,
-                    }
-
-                    res = requests.post(f"{self.api_base}/{ig_user_id}/media", data=item_data, timeout=60)
-
-                    if res.status_code != 200:
-                        return self._handle_error(res, "Carousel item creation failed")
-
-                    item_container_id = res.json().get("id")
-
-                    # Wait for each carousel item to be ready
-                    if not self._wait_for_media_processing(
-                        item_container_id, page_token, max_retries=15, delay=2
-                    ):
-                        return PublishResult(
-                            success=False,
-                            error_message=f"Carousel item {len(child_container_ids)+1} processing timeout",
-                        )
-
-                    child_container_ids.append(item_container_id)
-
-                # Create carousel parent container
-                carousel_data = {
-                    "media_type": "CAROUSEL",
-                    "children": ",".join(child_container_ids),
-                    "caption": content or "",
-                    "access_token": page_token,
-                }
-
-                parent_res = requests.post(
-                    f"{self.api_base}/{ig_user_id}/media", data=carousel_data, timeout=60
-                )
-
-                if parent_res.status_code != 200:
-                    return self._handle_error(parent_res, "Carousel parent creation failed")
-
-                container_id = parent_res.json().get("id")
-
-            # SINGLE MEDIA (Image or Video)
-            else:
-                file_doc = media_files[0]
-                file_url = file_doc.file_url if hasattr(file_doc, "file_url") else file_doc
-
-                if self._is_video(file_url):
-                    # Single video post
-                    public_url = self._get_public_url(file_url)
-
-                    video_data = {
-                        "media_type": "VIDEO",
-                        "video_url": public_url,
-                        "caption": content or "",
-                        "access_token": page_token,
-                    }
-
-                    res = requests.post(f"{self.api_base}/{ig_user_id}/media", data=video_data, timeout=30)
-
-                    if res.status_code != 200:
-                        return self._handle_error(res, "Video container creation failed")
-
-                    container_id = res.json().get("id")
-
-                    # Wait for video processing
-                    if not self._wait_for_media_processing(container_id, page_token, max_retries=60, delay=6):
-                        return PublishResult(success=False, error_message="Video processing timeout")
-
-                else:
-                    # Single image post
-                    if file_url.lower().endswith(".png"):
-                        file_url = self._convert_png_to_jpeg(file_url)
-
-                    public_url = self._get_public_url(file_url)
-
-                    image_data = {
-                        "image_url": public_url,
-                        "caption": content or "",
-                        "access_token": page_token,
-                    }
-
-                    res = requests.post(f"{self.api_base}/{ig_user_id}/media", data=image_data, timeout=30)
-
-                    if res.status_code != 200:
-                        return self._handle_error(res, "Image container creation failed")
-
-                    container_id = res.json().get("id")
-
-            # Publish the container
-            return self._publish_container(container_id, page_token, ig_user_id, "Post")
-
-        except Exception as e:
-            frappe.log_error(title="Instagram Feed Post Error", message=f"{str(e)}\n{frappe.get_traceback()}")
-            return PublishResult(success=False, error_message=str(e))
+    
 
     def _publish_container(
         self, container_id: str, page_token: str, ig_user_id: str, content_type: str

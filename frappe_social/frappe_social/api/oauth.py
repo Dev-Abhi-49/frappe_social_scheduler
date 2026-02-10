@@ -80,6 +80,24 @@ def _get_auth_url(platform: str, settings, redirect_uri: str, state: str) -> str
             "scope": "openid profile email w_member_social r_organization_admin w_organization_social",
         }
         return f"https://www.linkedin.com/oauth/v2/authorization?{'&'.join(f'{k}={frappe.utils.quoted(str(v))}' for k,v in params.items())}"
+    
+    elif platform == "InstagramStandalone":
+        scopes = [
+            "instagram_business_basic",
+            "instagram_business_content_publish",
+            "instagram_business_manage_comments",
+            "instagram_business_manage_messages",
+        ]
+        params = {
+            "client_id": settings.instagram_app_id,   # or reuse meta_app_id if same app
+            "redirect_uri": "https://punchiest-carey-unegotistical.ngrok-free.dev/api/method/frappe_social.frappe_social.api.oauth.callback_instagramstandalone",
+            "scope": " ".join(scopes),   # Business Login expects space-separated scopes
+            "response_type": "code",
+            "state": state,
+        }
+        return "https://www.instagram.com/oauth/authorize?" + "&".join(
+            f"{k}={frappe.utils.quoted(str(v))}" for k, v in params.items()
+        )
 
     elif platform in ["Instagram", "Facebook"]:
         scopes = [
@@ -93,7 +111,7 @@ def _get_auth_url(platform: str, settings, redirect_uri: str, state: str) -> str
             "publish_video"           
         ]
         if platform == "Instagram":
-            scopes = ["instagram_basic", "instagram_content_publish", "instagram_manage_insights", "instagram_manage_comments"]
+            scopes = ["instagram_basic", "instagram_content_publish", "instagram_manage_insights", "instagram_manage_comments", "pages_show_list","pages_read_engagement"]
         params = {
             "client_id": settings.meta_app_id,
             "redirect_uri": redirect_uri,
@@ -306,6 +324,93 @@ def callback_youtube():
     frappe.cache().delete_value(f"oauth_state_{state}")
     return _oauth_success_redirect(integration.name)
 
+@frappe.whitelist(allow_guest=True)
+def callback_instagramstandalone():
+    return _handle_instagram_standalone_callback()
+
+def _handle_instagram_standalone_callback():
+    code, state, error = (
+        frappe.request.args.get("code"),
+        frappe.request.args.get("state"),
+        frappe.request.args.get("error"),
+    )
+    if error:
+        return _oauth_error_redirect(f"Instagram: {error}")
+
+    cache_data = frappe.cache().get_value(f"oauth_state_{state}")
+    if not cache_data or cache_data.get("platform") != "InstagramStandalone":
+        return _oauth_error_redirect("Invalid OAuth state")
+
+    settings = frappe.get_single("Social Settings")
+    redirect_uri = get_callback_url("InstagramStandalone")
+
+    # 1) Exchange code -> short-lived token (Instagram Business Login)[web:9]
+    token_res = requests.post(
+        "https://api.instagram.com/oauth/access_token",
+        data={
+            "client_id": settings.instagram_app_id,
+            "client_secret": settings.get_password("instagram_app_secret"),
+            "grant_type": "authorization_code",
+            "redirect_uri": redirect_uri,
+            "code": code,
+        },
+        timeout=10,
+    )
+    if token_res.status_code != 200:
+        return _oauth_error_redirect(f"Instagram token exchange failed: {token_res.text}")
+    token_data = token_res.json()
+    short_token = token_data.get("access_token")
+    ig_user_id = token_data.get("user_id")
+
+    # 2) (optional but recommended) exchange for long‑lived user token[web:9]
+    ll_res = requests.get(
+        "https://graph.instagram.com/access_token",
+        params={
+            "grant_type": "ig_exchange_token",
+            "client_secret": settings.get_password("instagram_app_secret"),
+            "access_token": short_token,
+        },
+        timeout=10,
+    )
+    if ll_res.status_code == 200:
+        ll_data = ll_res.json()
+        user_token = ll_data.get("access_token", short_token)
+        expires_in = ll_data.get("expires_in", 5184000)
+    else:
+        user_token = short_token
+        expires_in = 3600
+
+    # 3) Fetch profile fields from Instagram Graph API user endpoint[web:9]
+    profile_res = requests.get(
+        f"https://graph.instagram.com/{ig_user_id}",
+        params={
+            "fields": "id,username,account_type,media_count",
+            "access_token": user_token,
+        },
+        timeout=10,
+    )
+    if profile_res.status_code != 200:
+        return _oauth_error_redirect(f"Failed to fetch Instagram profile: {profile_res.text}")
+    profile = profile_res.json()
+
+    frappe.set_user(cache_data.get("user"))
+
+    integration = _save_integration(
+        platform="Instagram",        # you can keep platform as 'Instagram' here, or 'InstagramStandalone' if you want to distinguish
+        profile_id=profile.get("id"),
+        profile_name=profile.get("username"),
+        access_token=user_token,
+        expires_in=expires_in,
+        account_type=profile.get("account_type") or "Business",
+        followers_count=0,
+        account_name=cache_data.get("account_name") or profile.get("username"),
+        account_description=cache_data.get("account_description"),
+        organization=cache_data.get("organization"),
+    )
+
+    frappe.cache().delete_value(f"oauth_state_{state}")
+    return _oauth_success_redirect(integration.name)
+
 # =============================================================================
 # Meta (Facebook/Instagram) Handler
 # =============================================================================
@@ -373,7 +478,10 @@ def _handle_meta_callback(platform: str):
     pages = (
         requests.get(
             f"https://graph.facebook.com/{api_version}/me/accounts",
-            params={"access_token": user_token, "fields": "id,name,tasks,access_token,picture{url},fan_count"},
+            params={
+                "access_token": user_token, 
+                "fields": "id,name,tasks,access_token,picture{url},fan_count,instagram_business_account{id,username,profile_picture_url,followers_count}",
+            },
         )
         .json()
         .get("data", [])
@@ -395,37 +503,30 @@ def _handle_meta_callback(platform: str):
 
     frappe.set_user(user)
     
-    # For Instagram, get ONLY user-selected IG accounts (Meta filters this automatically)
     if platform == "Instagram":
         selected_ig_accounts = []
-
-        for page in pages:  # pages already filtered by Meta permissions
-            ig_data = requests.get(
-                f"https://graph.facebook.com/{api_version}/{page['id']}",
-                params={
-                    "access_token": page["access_token"],
-                    "fields": "instagram_business_account{id,username,profile_picture_url,followers_count}",
-                },
-            ).json()
-
-            ig = ig_data.get("instagram_business_account")
-            if ig:
-                selected_ig_accounts.append({
-                    "page_id": page["id"],
-                    "page_name": page["name"],
-                    "page_access_token": page["access_token"],
-                    "instagram_id": ig["id"],
-                    "instagram_username": ig.get("username"),
-                    "followers_count": ig.get("followers_count", 0),
-                    "profile_picture_url": ig.get("profile_picture_url"),
-                })
-
+        for page in pages:
+            ig = page.get("instagram_business_account")
+            if not ig:
+                continue
+    
+            selected_ig_accounts.append({
+                "page_id": page["id"],
+                "page_name": page["name"],
+                "page_access_token": page["access_token"],
+                "instagram_id": ig["id"],
+                "instagram_username": ig.get("username"),
+                "followers_count": ig.get("followers_count", 0),
+                "profile_picture_url": ig.get("profile_picture_url"),
+            })
+    
         if not selected_ig_accounts:
             return _oauth_error_redirect(
-                "No Instagram Business account selected. Make sure you selected an Instagram account in Meta popup."
+                "No accessible Instagram Business accounts found. "
+                "Please ensure you selected at least one account in the Meta authorization dialog."
             )
-
-        # ✅ Save only what user selected (Meta already filtered this list)
+    
+        # Save only the verified/accessible accounts
         for ig in selected_ig_accounts:
             try:
                 integration = _save_integration(

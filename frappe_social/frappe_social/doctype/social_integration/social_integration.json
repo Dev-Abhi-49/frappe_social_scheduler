@@ -49,7 +49,7 @@
    "fieldtype": "Select",
    "in_standard_filter": 1,
    "label": "Platform",
-   "options": "Twitter\nLinkedIn\nInstagram\nFacebook\nYouTube",
+   "options": "Twitter\nLinkedIn\nInstagram\nInstagramStandalone\nFacebook\nYouTube",
    "placeholder": "Select Platform",
    "read_only": 1,
    "reqd": 1
@@ -273,7 +273,7 @@
  ],
  "image_field": "profile_image",
  "links": [],
- "modified": "2026-02-08 16:56:01.620281",
+ "modified": "2026-02-10 10:02:39.362645",
  "modified_by": "Administrator",
  "module": "Frappe Social",
  "name": "Social Integration",

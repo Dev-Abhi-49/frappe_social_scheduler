@@ -32,6 +32,11 @@
   "meta_app_secret",
   "column_break_meta",
   "meta_api_version",
+  "instagram_standalone_section",
+  "insta_instruction",
+  "column_break_cqqn",
+  "instagram_app_id",
+  "instagram_app_secret",
   "instagram_section",
   "instagram_posts_today",
   "instagram_daily_limit",
@@ -207,7 +212,7 @@
    "fieldname": "instagram_section",
    "fieldtype": "Section Break",
    "hidden": 1,
-   "label": "Instagram Limits"
+   "label": "Instagram Limits "
   },
   {
    "default": "0",
@@ -278,11 +283,36 @@
    "hidden": 1,
    "label": "Quota Reset Date",
    "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "instagram_standalone_section",
+   "fieldtype": "Section Break",
+   "label": "Instagram Standalone API Credentials"
+  },
+  {
+   "fieldname": "insta_instruction",
+   "fieldtype": "HTML",
+   "options": "<div class=\"alert alert-info\"><strong>How to get Instagram API Keys:</strong><ol><li>Go to <a href=\"https://developers.facebook.com/apps/\" target=\"_blank\">Meta for Developers</a></li><li>Click \"Create App\" \u2192 Select \"Business\" type and add product(Instagram)</li><li>In App Dashboard \u2192 Instagram \u2192 API setup with Instagram business login:<ul><li>Copy <strong>App ID</strong> and <strong>App Secret</strong></li></ul></li><li>Add In Instagram Login product:<ul><li>Settings \u2192 Valid OAuth Redirect URIs:</li><li><code>https://your-site.com/api/method/frappe_social.frappe_social.api.oauth.callback_instagram</code></li></ul></li><li>In App Review \u2192 Permissions, request:<ul><li><strong>instagram_business_content_publish</strong></li><li><strong>instagram_business_basic</strong></li><li><strong>instagram_business_manage_messages</strong></li><li><strong>instagram_business_manage_comments</strong></li></ul></li></ol><strong>Note:</strong> Instagram requires a Business/Creator account Page.<br><strong>Limits:</strong> 200 calls/hour, Instagram max 25 posts/day</div>"
+  },
+  {
+   "fieldname": "instagram_app_id",
+   "fieldtype": "Data",
+   "label": "Instagram App ID"
+  },
+  {
+   "fieldname": "instagram_app_secret",
+   "fieldtype": "Password",
+   "label": "Instagram App Secret"
+  },
+  {
+   "fieldname": "column_break_cqqn",
+   "fieldtype": "Column Break"
   }
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-02-07 21:36:11.002224",
+ "modified": "2026-02-10 09:35:38.815900",
  "modified_by": "Administrator",
  "module": "API Credentials",
  "name": "Social Settings",

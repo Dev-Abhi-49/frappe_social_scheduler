@@ -20,16 +20,16 @@ frappe.listview_settings['Social Integration'] = {
         if (urlParams.get('oauth_state') === 'complete') {
             const integrationName = urlParams.get('name');
             const platform = urlParams.get('platform');
-            
+
             if (integrationName) {
                 frappe.show_alert({
                     message: __('Account connected successfully'),
                     indicator: 'green'
                 }, 5);
-                
+
                 // Refresh the list
                 listview.refresh();
-                
+
                 // Clean up URL
                 window.history.replaceState({}, document.title, '/app/social-integration');
             }
@@ -64,12 +64,12 @@ frappe.listview_settings['Social Integration'] = {
                 }
             );
         });
-        
+
     },
 
     refresh(listview) {
         listview.page.clear_primary_action();
-        listview.page.set_primary_action(__('Connect Account'),() => show_connect_dialog(),'add');
+        listview.page.set_primary_action(__('Connect Account'), () => show_connect_dialog(), 'add');
     }
 };
 function show_connect_dialog() {
@@ -93,7 +93,7 @@ function show_connect_dialog() {
                 fieldname: 'platform',
                 fieldtype: 'Select',
                 label: __('Platform'),
-                options: 'Facebook\nInstagram\nTwitter\nLinkedIn\nYouTube',
+                options: 'Facebook\nInstagram\nInstagramStandalone\nTwitter\nLinkedIn\nYouTube',
                 reqd: 1,
                 placeholder: __('Select Platform')
             },
@@ -104,9 +104,9 @@ function show_connect_dialog() {
                 options: 'CRM Organization',
                 placeholder: __('Select Organization')
             },
-            { 
-                fieldname: 'info_section', 
-                fieldtype: 'Section Break' 
+            {
+                fieldname: 'info_section',
+                fieldtype: 'Section Break'
             },
             {
                 fieldname: "note",

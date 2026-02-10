@@ -21,7 +21,7 @@ class FacebookProvider(BaseProvider):
     DAILY_POST_LIMIT = 200
     ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif"]
     MAX_IMAGE_SIZE = 8 * 1024 * 1024  # 8 MB
-    ALLOWED_VIDEO_TYPES = ["video/mp4", "video/quicktime"]
+    ALLOWED_VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/mov"]
     MAX_VIDEO_SIZE = 4000 * 1024 * 1024  # 4 GB
     STORY_MAX_VIDEO_SIZE = 100 * 1024 * 1024  # 100 MB
     STORY_MAX_IMAGE_SIZE = 8 * 1024 * 1024  # 8 MB
@@ -31,7 +31,7 @@ class FacebookProvider(BaseProvider):
 
     def __init__(self, integration_name: str = None):
         super().__init__(integration_name)
-        self.api_version = self.settings.meta_api_version or "v21.0"
+        self.api_version = self.settings.meta_api_version or "v24.0"
         self.api_base = f"https://graph.facebook.com/{self.api_version}"
 
     def _get_full_path(self, file_path: str) -> str:
@@ -72,11 +72,42 @@ class FacebookProvider(BaseProvider):
 
     def _is_video(self, file_path: str) -> bool:
         """Check if file is a video"""
-        return file_path.lower().endswith((".mp4", ".mov", ".avi", ".mkv"))
+        return file_path.lower().endswith((".mp4", ".mov"))
 
     def _is_image(self, file_path: str) -> bool:
         """Check if file is an image"""
-        return file_path.lower().endswith((".jpg", ".jpeg", ".png", ".gif"))
+        return file_path.lower().endswith((".jpg", ".jpeg", ".png"))
+    
+    def _get_video_duration(self, path: str) -> float:
+        """Return video duration in seconds using ffprobe"""
+        import subprocess, json
+
+        cmd = [
+            "ffprobe", "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "json",
+            path,
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        data = json.loads(result.stdout)
+        return float(data["format"]["duration"])
+
+
+    def _get_video_dimensions(self, path: str):
+        """Return (width, height) of the video using ffprobe"""
+        import subprocess, json
+
+        cmd = [
+            "ffprobe", "-v", "error",
+            "-select_streams", "v:0",
+            "-show_entries", "stream=width,height",
+            "-of", "json",
+            path,
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        data = json.loads(result.stdout)
+        stream = data["streams"][0]
+        return int(stream["width"]), int(stream["height"])
 
     def publish_post(
         self, content: str = None, media_files: list = None, scheduled_time=None, **kwargs
@@ -89,233 +120,38 @@ class FacebookProvider(BaseProvider):
 
         page_token = self.integration.get_password("page_access_token")
         page_id = self.integration.page_id
+        
         if not page_token or not page_id:
             return PublishResult(success=False, error_message="Missing page credentials")
 
         # Determine content type from kwargs
-        is_story = kwargs.get("is_story", False)
-        is_reel = kwargs.get("is_reel", False)
+        is_fb_story = kwargs.get("is_fb_story", False)
+        is_fb_reel = kwargs.get("is_fb_reel", False)
+        is_fb_post = kwargs.get("is_fb_post", False)
+
 
         media_files = media_files or []
 
         try:
             # Route to appropriate handler
-            if is_story:
-                return self._publish_story(content, media_files, page_token, page_id)
-            elif is_reel:
-                return self._publish_reel(content, media_files, page_token, page_id)
+            if is_fb_reel:
+                return self._publish_reel(content, media_files, page_token, page_id, **kwargs)
+
+            elif is_fb_story:
+                return self._publish_story(content, media_files, page_token, page_id, **kwargs)
+
             else:
-                return self._publish_feed_post(
-                    content, media_files, page_token, page_id, scheduled_time, **kwargs
-                )
+                return self._publish_feed_post(content, media_files, page_token, page_id, **kwargs)
+            
         except Exception as e:
             frappe.log_error(
                 title="Facebook Publish Error",
                 message=f"Error: {str(e)}\nTraceback: {frappe.get_traceback()}",
             )
             return PublishResult(success=False, error_message=str(e))
-
-    def _publish_story(self, content: str, media_files: list, page_token: str, page_id: str) -> PublishResult:
-        """
-        Publish Facebook Page Story (24-hour content)
-        Stories support: single image or single video
-        """
-        if not media_files or len(media_files) != 1:
-            return PublishResult(
-                success=False, error_message="Stories require exactly one media file (photo or video)"
-            )
-
-        file_doc = media_files[0]
-        file_url = getattr(file_doc, "file_url", None) or file_doc
-
-        try:
-            if self._is_video(file_url):
-                return self._publish_video_story(file_url, page_token, page_id)
-            elif self._is_image(file_url):
-                return self._publish_photo_story(file_url, page_token, page_id)
-            else:
-                return PublishResult(
-                    success=False, error_message="Unsupported media type for story (use JPG/PNG/GIF or MP4)"
-                )
-        except Exception as e:
-            frappe.log_error(
-                title="Facebook Story Error",
-                message=f"Story publish failed: {str(e)}\n{frappe.get_traceback()}",
-            )
-            return PublishResult(success=False, error_message=f"Story creation failed: {str(e)}")
-
-    def _publish_photo_story(self, file_url: str, page_token: str, page_id: str) -> PublishResult:
-        """Publish photo story - two step process"""
-        try:
-            full_path = self._get_full_path(file_url)
-
-            # Check file exists and is readable
-            if not os.path.exists(full_path):
-                return PublishResult(success=False, error_message=f"File not found: {full_path}")
-
-            # Step 1: Upload photo (unpublished)
-            with open(full_path, "rb") as f:
-                upload_resp = requests.post(
-                    f"{self.api_base}/{page_id}/photos",
-                    files={"source": f},
-                    data={"published": "false", "access_token": page_token},
-                    timeout=60,
-                ).json()
-
-            if "id" not in upload_resp:
-                return self._handle_error(upload_resp, "Photo upload for story failed")
-
-            photo_id = upload_resp["id"]
-
-            # Step 2: Publish as story
-            publish_resp = requests.post(
-                f"{self.api_base}/{page_id}/photo_stories",
-                data={"photo_id": photo_id, "access_token": page_token},
-                timeout=30,
-            )
-
-            if publish_resp.status_code != 200:
-                return self._handle_error(publish_resp.json(), "Photo story publish failed")
-
-            frappe.logger().info(f"Photo story published successfully with photo_id: {photo_id}")
-            post_url = f"https://www.facebook.com/{photo_id}"
-            return PublishResult(success=True, post_id=photo_id, post_url=post_url)
-        except Exception as e:
-            frappe.log_error(
-                title="Facebook Photo Story Error", message=f"{str(e)}\n{frappe.get_traceback()}"
-            )
-            return PublishResult(success=False, error_message=str(e))
-
-    def _publish_video_story(self, file_url: str, page_token: str, page_id: str) -> PublishResult:
-        try:
-            full_path = self._get_full_path(file_url)
-
-            # Check file exists and is readable
-            if not os.path.exists(full_path):
-                return PublishResult(success=False, error_message=f"File not found: {full_path}")
-
-            file_size = os.path.getsize(full_path)
-
-            if file_size > self.STORY_MAX_VIDEO_SIZE:
-                return PublishResult(success=False, error_message="Story video exceeds 100MB limit")
-
-            # STEP 1: Init session
-            start_resp = requests.post(
-                f"{self.api_base}/{page_id}/video_stories",
-                data={
-                    "upload_phase": "start",
-                    "access_token": page_token,
-                },
-                timeout=600,
-            )
-
-            if start_resp.status_code != 200:
-                return self._handle_error(start_resp.json(), "Video story start failed")
-
-            start_data = start_resp.json()
-            video_id = start_data.get("video_id")
-            upload_url = start_data.get("upload_url")
-
-            if not video_id or not upload_url:
-                return self._handle_error(start_data, "Missing video_id or upload_url in start response")
-
-            # STEP 2: Upload EXACTLY as Meta docs
-            with open(full_path, "rb") as f:
-                upload_resp = requests.post(
-                    upload_url,
-                    headers={
-                        "Authorization": f"OAuth {page_token}",
-                        "offset": "0",  # ⚠️ lowercase
-                        "file_size": str(file_size),  # ⚠️ REQUIRED
-                    },
-                    data=f,  # raw binary
-                    timeout=600,
-                )
-
-            if upload_resp.status_code != 200:
-                frappe.log_error(
-                    title="Video Story Upload Failed",
-                    message=f"{upload_resp.status_code}\n{upload_resp.text}",
-                )
-                return PublishResult(success=False, error_message="Video upload failed")
-
-            upload_json = upload_resp.json() if upload_resp.content else {}
-            if upload_json.get("success") is not True:
-                return self._handle_error(upload_json, "Upload phase failed")
-
-            # STEP 3: Finish
-            finish_resp = requests.post(
-                f"{self.api_base}/{page_id}/video_stories",
-                data={
-                    "upload_phase": "finish",
-                    "video_id": video_id,
-                    "access_token": page_token,
-                },
-                timeout=600,
-            )
-
-            if finish_resp.status_code != 200:
-                return self._handle_error(finish_resp.json(), "Video story finish failed")
-
-            post_url = f"https://www.facebook.com/{video_id}"
-            return PublishResult(success=True, post_id=video_id, post_url=post_url)
-        except Exception as e:
-            frappe.log_error(
-                title="Facebook Video Story Error", message=f"{str(e)}\n{frappe.get_traceback()}"
-            )
-            return PublishResult(success=False, error_message=str(e))
-
-    def _publish_reel(self, content: str, media_files: list, page_token: str, page_id: str) -> PublishResult:
-        """
-        Publish Facebook Reel (short vertical video)
-        """
-        if not media_files or len(media_files) != 1:
-            return PublishResult(success=False, error_message="Reels require exactly one video")
-
-        file_doc = media_files[0]
-        file_url = getattr(file_doc, "file_url", None) or file_doc
-        if not self._is_video(file_url):
-            return PublishResult(success=False, error_message="Reels require video files (.mp4 or .mov)")
-
-        try:
-            full_path = self._get_full_path(file_url)
-
-            # Check file exists and is readable
-            if not os.path.exists(full_path):
-                return PublishResult(success=False, error_message=f"File not found: {full_path}")
-
-            file_size = os.path.getsize(full_path)
-
-            if file_size > self.REEL_MAX_VIDEO_SIZE:
-                return PublishResult(
-                    success=False,
-                    error_message=f"Reel video too large: {file_size / (1024*1024):.2f}MB (max 1GB)",
-                )
-
-            with open(full_path, "rb") as f:
-                reel_resp = requests.post(
-                    f"{self.api_base}/{page_id}/videos",
-                    files={"source": f},
-                    data={
-                        "description": content or "",
-                        "access_token": page_token,
-                        # Short vertical videos automatically become Reels
-                    },
-                    timeout=600,
-                ).json()
-
-            if "id" not in reel_resp:
-                return self._handle_error(reel_resp, "Reel upload failed")
-
-            reel_id = reel_resp["id"]
-            post_url = f"https://www.facebook.com/{reel_id}"
-            return PublishResult(success=True, post_id=reel_id, post_url=post_url)
-        except Exception as e:
-            frappe.log_error(title="Facebook Reel Error", message=f"{str(e)}\n{frappe.get_traceback()}")
-            return PublishResult(success=False, error_message=f"Reel creation failed: {str(e)}")
-
+    
     def _publish_feed_post(
-        self, content: str, media_files: list, page_token: str, page_id: str, scheduled_time=None, **kwargs
+        self, content: str, media_files: list, page_token: str, page_id: str, **kwargs
     ) -> PublishResult:
         """
         Publish regular Facebook Feed Post
@@ -369,29 +205,29 @@ class FacebookProvider(BaseProvider):
             data = {"access_token": page_token, "message": content or ""}
 
             # Handle scheduling
-            if scheduled_time:
-                data.update(
-                    {
-                        "published": "false",
-                        "scheduled_publish_time": int(scheduled_time.timestamp()),
-                    }
-                )
+            # if scheduled_time:
+            #     data.update(
+            #         {
+            #             "published": "false",
+            #             "scheduled_publish_time": int(scheduled_time.timestamp()),
+            #         }
+            #     )
 
             # Handle CTA
-            cta = kwargs.get("cta")
-            link = kwargs.get("link")
-            url_build = kwargs.get("url_build")
-            final_link = url_build if url_build else link
+            # cta = kwargs.get("cta")
+            # link = kwargs.get("link")
+            # url_build = kwargs.get("url_build")
+            # final_link = url_build if url_build else link
 
-            if cta and final_link:
-                cta_type = self._map_cta(cta)
-                if cta_type:
-                    if attached_media:
-                        data["call_to_action"] = frappe.as_json(
-                            {"type": cta_type, "value": {"link": final_link}}
-                        )
-                    else:
-                        data["link"] = final_link
+            # if cta and final_link:
+            #     cta_type = self._map_cta(cta)
+            #     if cta_type:
+            #         if attached_media:
+            #             data["call_to_action"] = frappe.as_json(
+            #                 {"type": cta_type, "value": {"link": final_link}}
+            #             )
+            #         else:
+            #             data["link"] = final_link
 
             # Attach media for multi-image posts
             for i, media_item in enumerate(attached_media):
@@ -409,6 +245,317 @@ class FacebookProvider(BaseProvider):
 
         except Exception as e:
             frappe.log_error(title="Facebook Feed Post Error", message=f"{str(e)}\n{frappe.get_traceback()}")
+            return PublishResult(success=False, error_message=str(e))
+
+    def _publish_reel(self, content: str, media_files: list, page_token: str, page_id: str, **kwargs) -> PublishResult:
+        """
+        Publish Facebook Reel (short vertical video)
+        """
+        if not media_files or len(media_files) != 1:
+            return PublishResult(success=False, error_message="Reels require exactly one video")
+
+        file_doc = media_files[0]
+        file_url = getattr(file_doc, "file_url", None) or file_doc
+        
+        if not self._is_video(file_url):
+            return PublishResult(success=False, error_message="Reels require video files (.mp4 or .mov)")
+
+        try:
+            full_path = self._get_full_path(file_url)
+
+            # Check file exists and is readable
+            if not os.path.exists(full_path):
+                return PublishResult(success=False, error_message=f"File not found: {full_path}")
+
+            file_size = os.path.getsize(full_path)
+            
+            if file_size > self.REEL_MAX_VIDEO_SIZE:
+                return PublishResult(
+                    success=False,
+                    error_message=f"Reel video too large: {file_size / (1024*1024):.2f}MB (max 1GB)",
+                )
+            
+            duration = self._get_video_duration(full_path)
+            if duration < self.REEL_MIN_DURATION or duration > self.REEL_MAX_DURATION:
+                return PublishResult(
+                    success=False,
+                    error_message=(
+                        f"Reel duration must be {self.REEL_MIN_DURATION}–{self.REEL_MAX_DURATION} seconds "
+                        f"(got {duration:.1f}s)"
+                    ),
+                )
+
+            # Validate aspect ratio (must be vertical 9:16)
+            width, height = self._get_video_dimensions(full_path)
+            if height <= width:
+                return PublishResult(
+                    success=False,
+                    error_message=f"Reels must be vertical (9:16). Got {width}x{height}."
+                )
+                
+            # Upload Phase
+            start_resp = requests.post(
+                f"{self.api_base}/{page_id}/video_reels",
+                data={
+                    "upload_phase": "start",
+                    "access_token": page_token,
+                },
+                timeout=60,
+            )
+            
+            if start_resp.status_code not in (200, 201):
+                return PublishResult(
+                    success=False, 
+                    error_message=f"Reel start failed: {start_resp.text}"
+                )
+                
+            start_data = start_resp.json()            
+            video_id = start_data.get("video_id")
+            upload_url = start_data.get("upload_url")
+            
+            if not video_id or not upload_url:
+                return self._handle_error(start_resp, "Reel upload start failed")
+
+            with open(full_path, "rb") as f:
+                upload_resp = requests.post(
+                    upload_url,
+                    headers={
+                        "Authorization": f"OAuth {page_token}",
+                        "offset": "0",
+                        "file_size": str(file_size),
+                    },
+                    data=f,
+                    timeout=600,
+                )
+
+            if upload_resp.status_code not in (200, 201):
+                return PublishResult(success=False, error_message=f"Reel video upload failed: {upload_resp.text}")
+            
+            finish_resp = requests.post(
+                f"{self.api_base}/{page_id}/video_reels",
+                data={
+                    "upload_phase": "finish",
+                    "video_id": video_id,
+                    "access_token": page_token,
+                    "video_state": "PUBLISHED",
+                    "description": content or "",
+                },
+                timeout=60,
+            )
+            
+            if finish_resp.status_code not in (200, 201):
+                return PublishResult(
+                    success=False, 
+                    error_message=f"Reel finish failed: {finish_resp.text}"
+                )
+
+            finish_data = finish_resp.json()
+
+            if finish_data.get("success") is not True:
+                return self._handle_error(finish_data, "Reel publish failed")
+            
+            post_url = f"https://www.facebook.com/reel/{video_id}"
+            return PublishResult(success=True, post_id=video_id, post_url=post_url)
+        
+        except Exception as e:
+            frappe.log_error(title="Facebook Reel Error", message=f"{str(e)}\n{frappe.get_traceback()}")
+            return PublishResult(success=False, error_message=f"Reel creation failed: {str(e)}")
+
+    def _publish_story(self, content: str, media_files: list, page_token: str, page_id: str, **kwargs) -> PublishResult:
+        """
+        Publish Facebook Page Story (24-hour content)
+        Stories support: single image or single video
+        """
+        if not media_files or len(media_files) == 0:
+            return PublishResult(
+                success=False, error_message="Stories require at least one media file (photo or video)"
+            )
+
+        file_doc = media_files[0]
+        file_url = getattr(file_doc, "file_url", None) or file_doc
+
+        try:
+            if self._is_video(file_url):
+                return self._publish_video_story(file_url, page_token, page_id)
+            elif self._is_image(file_url):
+                return self._publish_photo_story(file_url, page_token, page_id)
+            else:
+                return PublishResult(
+                    success=False, error_message="Unsupported media type for story (use JPG/PNG/GIF or MP4)"
+                )
+        except Exception as e:
+            frappe.log_error(
+                title="Facebook Story Error",
+                message=f"Story publish failed: {str(e)}\n{frappe.get_traceback()}",
+            )
+            return PublishResult(success=False, error_message=f"Story creation failed: {str(e)}")
+        
+    
+    def _publish_photo_story(self, file_url: str, page_token: str, page_id: str) -> PublishResult:
+        try:
+            full_path = self._get_full_path(file_url)
+
+            if not os.path.exists(full_path):
+                return PublishResult(success=False, error_message=f"File not found: {full_path}")
+
+            with open(full_path, "rb") as f:
+                photo_resp = requests.post(
+                    f"{self.api_base}/{page_id}/photos",
+                    files={"source": f},
+                    data={
+                        "access_token": page_token,
+                        "published": "false",
+                    },
+                    timeout=120,
+                )
+                
+            if photo_resp.status_code not in (200, 201):
+                return PublishResult(
+                    success=False, 
+                    error_message=f"Photo upload failed: {photo_resp.text}"
+                )
+                
+            photo_data = photo_resp.json()
+            
+            photo_id = photo_data.get("id")
+            
+            if not photo_id:
+                return self._handle_error(photo_data, "Photo upload failed")
+            
+            photo_id = photo_data.get("id")
+        
+            story_resp = requests.post(
+                f"{self.api_base}/{page_id}/photo_stories",
+                data={
+                    "photo_id": photo_id,
+                    "access_token": page_token,
+                },
+                timeout=60,
+            )
+            
+            if story_resp.status_code not in (200, 201):
+                return PublishResult(
+                    success=False, 
+                    error_message=f"Photo story publish failed: {story_resp.text}"
+                )
+
+            story_data = story_resp.json()
+
+            if story_data.get("success") is not True:
+                return self._handle_error(story_data, "Photo story publish failed")
+
+            story_id = story_data.get("post_id", photo_id)
+            post_url = f"https://www.facebook.com/stories/{page_id}/{story_id}"
+
+            return PublishResult(success=True, post_id=story_id, post_url=post_url)
+
+        except Exception as e:
+            frappe.log_error(
+                title="Facebook Photo Story Error",
+                message=f"{str(e)}\n{frappe.get_traceback()}",
+            )
+            return PublishResult(success=False, error_message=str(e))
+
+    def _publish_video_story(self, file_url: str, page_token: str, page_id: str) -> PublishResult:
+        try:
+            full_path = self._get_full_path(file_url)
+
+            if not os.path.exists(full_path):
+                return PublishResult(success=False, error_message=f"File not found: {full_path}")
+
+            file_size = os.path.getsize(full_path)
+
+            if file_size > self.STORY_MAX_VIDEO_SIZE:
+                return PublishResult(success=False, error_message="Story video exceeds limit")
+
+            duration = self._get_video_duration(full_path)
+            if duration > 60:
+                return PublishResult(
+                    success=False,
+                    error_message=f"Story videos must be 60s or less (got {duration:.1f}s)"
+                )
+
+            # 🎯 Validate aspect ratio
+            width, height = self._get_video_dimensions(full_path)
+            if height <= width:
+                return PublishResult(
+                    success=False,
+                    error_message=f"Stories must be vertical (9:16). Got {width}x{height}."
+                )
+                
+            # STEP 1: Start
+            start_resp = requests.post(
+                f"{self.api_base}/{page_id}/video_stories",
+                data={
+                    "upload_phase": "start",
+                    "access_token": page_token,
+                },
+                timeout=60,
+            )
+            
+            if start_resp.status_code not in (200, 201):
+                return PublishResult(
+                    success=False, 
+                    error_message=f"Video story start failed: {start_resp.text}"
+                )
+
+            start_data = start_resp.json()
+
+            video_id = start_data.get("video_id")
+            upload_url = start_data.get("upload_url")
+
+            if not video_id or not upload_url:
+                return self._handle_error(start_data, "Video story start failed")
+
+            # STEP 2: Upload bytes
+            with open(full_path, "rb") as f:
+                upload_resp = requests.post(
+                    upload_url,
+                    headers={
+                        "Authorization": f"OAuth {page_token}",
+                        "offset": "0",
+                        "file_size": str(file_size),
+                    },
+                    data=f,
+                    timeout=600,
+                )
+
+            if upload_resp.status_code not in (200, 201):
+                return PublishResult(success=False, error_message=f"Video upload failed: {upload_resp.text}")
+
+            # STEP 3: Finish + PUBLISH AS STORY
+            finish_resp = requests.post(
+                f"{self.api_base}/{page_id}/video_stories",
+                data={
+                    "upload_phase": "finish",
+                    "video_id": video_id,
+                    "video_state": "PUBLISHED",
+                    "access_token": page_token,
+                },
+                timeout=60,
+            )
+            
+            if finish_resp.status_code not in (200, 201):
+                return PublishResult(
+                    success=False, 
+                    error_message=f"Video story finish failed: {finish_resp.text}"
+                )
+
+            finish_data = finish_resp.json()
+
+            if finish_data.get("success") is not True:
+                return self._handle_error(finish_data, "Video story publish failed")
+            
+            story_id = finish_data.get("post_id", video_id)
+
+            post_url = f"https://www.facebook.com/stories/{page_id}/{story_id}"
+            return PublishResult(success=True, post_id=story_id, post_url=post_url)
+
+        except Exception as e:
+            frappe.log_error(
+                title="Facebook Video Story Error",
+                message=f"{str(e)}\n{frappe.get_traceback()}",
+            )
             return PublishResult(success=False, error_message=str(e))
 
     def _handle_error(self, response_data, context: str):
