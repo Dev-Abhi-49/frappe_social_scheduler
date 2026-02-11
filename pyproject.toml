@@ -80,4 +80,7 @@ dev = [
 
 [tool.system-packages]
 # For documentation only - actual install via apt-packages.txt
-packages = ["ffmpeg"]
+packages = ["ffmpeg",]
+
+[deploy.dependencies.apt]
+packages = ["ffmpeg",]
