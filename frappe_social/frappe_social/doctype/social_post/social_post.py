@@ -228,7 +228,7 @@ class SocialPost(Document):
                 media_item.duration = duration
                 
                 if duration > 60:
-                    frappe.throw(_("Facebook Story videos must be 60 seconds or less (got {0:.1f}s)").format(duration))
+                    frappe.throw(_("Facebook Story videos must be between 1- 120 seconds (got {0:.1f}s)").format(duration))
 
                 # width, height = self._get_video_dimensions(full_path)
                 
