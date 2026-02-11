@@ -79,7 +79,7 @@ class InstagramProvider(BaseProvider):
             "json",
             path,
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         data = json.loads(result.stdout)
         return float(data["format"]["duration"])
 

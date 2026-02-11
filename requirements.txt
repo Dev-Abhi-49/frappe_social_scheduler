@@ -19,5 +19,4 @@ python-magic>=0.4.27
 # Frappe Framework (installed separately via bench)
 # frappe>=15.0.0
 
-# For video processing (duration, dimensions)
-ffmpeg-python>=0.2.0  
+opencv-python>=4.8.0

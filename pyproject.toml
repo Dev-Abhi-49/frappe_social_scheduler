@@ -71,3 +71,13 @@ ignore = [
     "E501",  # line too long (handled by black)
     "B008",  # do not perform function calls in argument defaults
 ]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=23.0.0",
+]
+
+[tool.system-packages]
+# For documentation only - actual install via apt-packages.txt
+packages = ["ffmpeg"]
