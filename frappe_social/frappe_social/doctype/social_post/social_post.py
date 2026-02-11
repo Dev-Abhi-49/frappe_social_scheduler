@@ -3,6 +3,7 @@
 import frappe
 from frappe import _
 import subprocess, json
+import os
 from frappe.model.document import Document
 from frappe_social.frappe_social.utils.media import normalize_file_type
 
@@ -103,6 +104,7 @@ class SocialPost(Document):
     def _get_video_duration(self, path: str) -> float:
         if not os.path.exists(path):
             frappe.throw(_("File not found: {0}").format(path))
+
         try:
             cmd = [
                 "ffprobe", "-v", "error",
@@ -112,16 +114,13 @@ class SocialPost(Document):
             ]
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
             
-            if result.returncode != 0:
-                frappe.throw(_("Failed to read video duration: {0}").format(result.stderr))
-                
             data = json.loads(result.stdout)
-            duration = data.get("format", {}).get("duration")
+            duration = float(data.get("format", {}).get("duration", 0))
             
-            if not duration:
+            if duration <= 0:
                 frappe.throw(_("Could not determine video duration"))
                 
-            return float(data["format"]["duration"])
+            return duration
         
         except Exception as e:
             frappe.throw(_("Error reading video duration: {0}").format(str(e)))
@@ -187,11 +186,12 @@ class SocialPost(Document):
             if "video" not in file_type:
                 frappe.throw(_("Facebook Reels require video files (.mp4 or .mov)"))
             
-            full_path = self.get_full_path(media_item.file)
+            full_path = self._get_full_path(media_item.file)
             if media_item.file_size > 1024 * 1024 * 1024:
                 frappe.throw(_("Facebook Reels must be under 1GB"))
                 
             duration = self._get_video_duration(full_path)
+            media_item.duration = duration
             
             if duration < 3 or duration > 90:
                 frappe.throw(_("Facebook Reels must be between 3 and 90 seconds (got {0:.1f}s)").format(duration))
@@ -207,31 +207,6 @@ class SocialPost(Document):
                 frappe.throw(
                     _("Facebook Reels should be 9:16 aspect ratio. Got {0:.2f}:1").format(ratio)
                 )
-                        
-        # # Story validations
-        # if self.is_fb_story:
-        #     if not self.media or len(self.media) == 0:
-        #         frappe.throw(_("Facebook Stories require at least one media file"))
-            
-        #     media_item = self.media[0]
-        #     file_type = (media_item.file_type or "").lower()
-        #     full_path = frappe.get_site_path(media_item.file.lstrip("/"))
-
-        #     if "video" in file_type:
-        #         duration = self._get_video_duration(full_path)
-        #         if duration > 60:
-        #             frappe.throw(_("Facebook Story videos must be 60 seconds or less"))
-
-        #         width, height = self._get_video_dimensions(full_path)
-        #         ratio = height / width
-        #         if ratio < 1.3:
-        #             frappe.throw(_("Facebook Story videos must be vertical (9:16 or portrait)"))
-
-        #     elif "image" in file_type:
-        #         from PIL import Image
-        #         with Image.open(full_path) as img:
-        #             if img.height <= img.width:
-        #                 frappe.throw(_("Facebook Story images must be vertical (9:16 or portrait)"))
         
         if self.is_fb_story:
             if not self.media or len(self.media) == 0:
@@ -245,34 +220,36 @@ class SocialPost(Document):
             full_path = self._get_full_path(media_item.file)
 
             if "video" in file_type:
-                # ✅ Check file size (100MB limit for story videos)
+                # Check file size (100MB limit for story videos)
                 if media_item.file_size > 100 * 1024 * 1024:
                     frappe.throw(_("Facebook Story videos must be under 100MB"))
                 
                 duration = self._get_video_duration(full_path)
+                media_item.duration = duration
+                
                 if duration > 60:
                     frappe.throw(_("Facebook Story videos must be 60 seconds or less (got {0:.1f}s)").format(duration))
 
-                width, height = self._get_video_dimensions(full_path)
+                # width, height = self._get_video_dimensions(full_path)
                 
-                if height <= width:
-                    frappe.throw(
-                        _("Facebook Story videos must be vertical. Got {0}x{1}").format(width, height)
-                    )
+                # if height <= width:
+                #     frappe.throw(
+                #         _("Facebook Story videos must be vertical. Got {0}x{1}").format(width, height)
+                #     )
 
             elif "image" in file_type:
                 # ✅ Check file size (8MB limit for story images)
                 if media_item.file_size > 8 * 1024 * 1024:
                     frappe.throw(_("Facebook Story images must be under 8MB"))
                 
-                try:
-                    with Image.open(full_path) as img:
-                        if img.height <= img.width:
-                            frappe.throw(
-                                _("Facebook Story images must be vertical. Got {0}x{1}").format(img.width, img.height)
-                            )
-                except Exception as e:
-                    frappe.throw(_("Failed to read image file: {0}").format(str(e)))
+                # try:
+                #     with image.open(full_path) as img:
+                #         # if img.height <= img.width:
+                #         #     frappe.throw(
+                #         #         _("Facebook Story images must be vertical. Got {0}x{1}").format(img.width, img.height)
+                #         #     )
+                # except Exception as e:
+                #     frappe.throw(_("Failed to read image file: {0}").format(str(e)))
             else:
                 frappe.throw(_("Facebook Stories require either an image or video file"))
 
@@ -300,8 +277,17 @@ class SocialPost(Document):
             # Check if media is a video
             media_item = self.media[0]
             file_type = (media_item.file_type or "").lower()
+            
             if "video" not in file_type:
                 frappe.throw(_("Instagram Reels require video files (.mp4 or .mov)"))
+
+            full_path = self._get_full_path(media_item.file)
+            duration = self._get_video_duration(full_path)
+            media_item.duration = duration  # ✅ SAVE IT
+        
+        # Add duration validation if needed
+            if duration < 3 or duration > 90:
+                frappe.throw(_("Instagram Reels must be between 3 and 90 seconds (got {0:.1f}s)").format(duration))
 
         # Post-specific validations
         if self.is_ig_post:

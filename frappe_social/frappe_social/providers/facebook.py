@@ -666,9 +666,9 @@ class FacebookProvider(BaseProvider):
                 title="FB Account Analytics Error",
             )
             return AnalyticsResult(success=False, error_message=str(e))
-
+  
     def fetch_post_analytics(self, post_id: str, integration_name: str = None) -> AnalyticsResult:
-        """Fetch analytics for a specific post - safe for both Post and Video nodes"""
+        """Fetch analytics for Posts, Videos, and Stories"""
         try:
             integration = self.get_integration_doc(integration_name or self.integration_name)
             page_token = integration.get_password("page_access_token") or integration.get_password(
@@ -677,43 +677,86 @@ class FacebookProvider(BaseProvider):
             if not page_token:
                 return AnalyticsResult(success=False, error_message="Missing token")
 
-            # Step 1: Get basic post data safely
+            likes = comments = shares = impressions = reach = 0
+
+            # Step 1: Try as regular Post first (with reactions and shares)
             response = requests.get(
                 f"{self.api_base}/{post_id}",
                 params={
                     "access_token": page_token,
-                    "fields": "id,permalink_url,reactions.summary(total_count),comments.summary(total_count),shares",
+                    "fields": "reactions.summary(total_count),comments.summary(total_count),shares",
                 },
             )
 
-            likes = comments = shares = 0
             if response.status_code == 200:
+                # It's a regular Post
                 data = response.json()
                 likes = data.get("reactions", {}).get("summary", {}).get("total_count", 0)
                 comments = data.get("comments", {}).get("summary", {}).get("total_count", 0)
-                # Safely get shares — may be missing on Video nodes
                 shares_data = data.get("shares", {})
                 if isinstance(shares_data, dict):
                     shares = shares_data.get("count", 0)
-                # If 'shares' is missing entirely (common on Video), default to 0
+
+                frappe.logger().info(f"Fetched Post analytics for {post_id}")
+
             else:
                 error = response.json().get("error", {})
-                # If field error, continue with 0 shares
-                if error.get("code") == 100 and "shares" in error.get("message", ""):
-                    frappe.logger().info(f"Shares field not available for post {post_id} (likely a Video)")
-                    shares = 0
-                else:
-                    return AnalyticsResult(
-                        success=False, error_message=error.get("message", "Failed to fetch post data")
+                error_code = error.get("code")
+                error_message = error.get("message", "").lower()
+
+                # Step 2: Check if it's a Video node (reactions field doesn't exist)
+                if error_code == 100 and "reactions" in error_message:
+                    frappe.logger().info(f"Video node detected for {post_id}")
+
+                    response = requests.get(
+                        f"{self.api_base}/{post_id}",
+                        params={
+                            "access_token": page_token,
+                            "fields": "likes.summary(total_count),comments.summary(total_count)",
+                        },
                     )
 
-            # Step 2: Get insights (impressions & reach)
-            impressions = reach = 0
+                    if response.status_code == 200:
+                        data = response.json()
+                        likes = data.get("likes", {}).get("summary", {}).get("total_count", 0)
+                        comments = data.get("comments", {}).get("summary", {}).get("total_count", 0)
+                        shares = 0
+                    else:
+                        error = response.json().get("error", {})
+                        error_message = error.get("message", "").lower()
+
+                        # Step 3: Check if it's a Story node (most fields don't exist)
+                        if error_code == 100:
+                            frappe.logger().info(f"Story node detected for {post_id}")
+                            return self._fetch_story_analytics(post_id, page_token)
+                        else:
+                            return AnalyticsResult(
+                                success=False, 
+                                error_message=error.get("message", "Failed to fetch video analytics")
+                            )
+
+                # Step 3b: Direct Story detection (if 'id' field failed)
+                elif error_code == 100 and ("id" in error_message or "stories" in error_message):
+                    frappe.logger().info(f"Story node detected for {post_id}")
+                    return self._fetch_story_analytics(post_id, page_token)
+
+                else:
+                    # Some other error
+                    return AnalyticsResult(
+                        success=False, 
+                        error_message=error.get("message", "Failed to fetch post data")
+                    )
+
+            # Get insights for Posts and Videos (not available for Stories)
             try:
                 insights_resp = requests.get(
                     f"{self.api_base}/{post_id}/insights",
-                    params={"access_token": page_token, "metric": "post_impressions,post_impressions_unique"},
+                    params={
+                        "access_token": page_token, 
+                        "metric": "post_impressions,post_impressions_unique"
+                    },
                 )
+
                 if insights_resp.status_code == 200:
                     for item in insights_resp.json().get("data", []):
                         value = item.get("values", [{}])[0].get("value", 0)
@@ -721,11 +764,13 @@ class FacebookProvider(BaseProvider):
                             impressions = value
                         elif item["name"] == "post_impressions_unique":
                             reach = value
+
             except Exception as e:
-                frappe.logger().warning(f"Insights unavailable for {post_id}: {str(e)}")
+                frappe.logger().debug(f"Insights unavailable for {post_id}: {str(e)}")
 
             # Calculate engagement rate
             total_engagement = likes + comments + shares
+
             if reach > 0:
                 engagement_rate = round((total_engagement / reach) * 100, 2)
             elif impressions > 0:
@@ -746,5 +791,100 @@ class FacebookProvider(BaseProvider):
             )
 
         except Exception as e:
-            frappe.log_error(message=f"Post ID: {post_id}\nError: {str(e)}", title="FB Post Analytics Error")
+            frappe.log_error(
+                message=f"Post ID: {post_id}\nError: {str(e)}", 
+                title="FB Post Analytics Error"
+            )
             return AnalyticsResult(success=False, error_message=str(e))
+
+
+    def _fetch_story_analytics(self, story_id: str, page_token: str) -> AnalyticsResult:
+        """Fetch analytics specifically for Facebook Stories"""
+        try:
+            frappe.logger().info(f"Fetching Story-specific analytics for {story_id}")
+
+            impressions = reach = 0
+
+            # Stories have very limited analytics - only insights are available
+            insights_resp = requests.get(
+                f"{self.api_base}/{story_id}/insights",
+                params={
+                    "access_token": page_token,
+                    "metric": "reach,impressions,exits,replies,taps_forward,taps_back"
+                },
+            )
+
+            if insights_resp.status_code == 200:
+                data = insights_resp.json().get("data", [])
+
+                replies = 0
+                exits = 0
+                taps_forward = 0
+                taps_back = 0
+
+                for item in data:
+                    metric_name = item.get("name")
+                    value = item.get("values", [{}])[0].get("value", 0)
+
+                    if metric_name == "impressions":
+                        impressions = value
+                        views = value
+                    elif metric_name == "reach":
+                        reach = value
+                    elif metric_name == "replies":
+                        replies = value
+                    elif metric_name == "exits":
+                        exits = value
+                    elif metric_name == "taps_forward":
+                        taps_forward = value
+                    elif metric_name == "taps_back":
+                        taps_back = value
+
+                # For stories, use replies as engagement (likes/comments not available)
+                engagement_rate = 0
+                if reach > 0:
+                    engagement_rate = round((replies / reach) * 100, 2)
+
+                frappe.logger().info(
+                    f"Story analytics: impressions={impressions}, reach={reach}, "
+                    f"replies={replies}, exits={exits}"
+                )
+
+                return AnalyticsResult(
+                    success=True,
+                    metrics={
+                        "likes": 0,  # Not available for Stories
+                        "comments": replies,  # Use replies as comments
+                        "shares": 0,  # Not available for Stories
+                        "impressions": impressions,
+                        "reach": reach,
+                        "engagement_rate": engagement_rate,
+                        # Additional story-specific metrics
+                        "exits": exits,
+                        "taps_forward": taps_forward,
+                        "taps_back": taps_back,
+                    },
+                )
+            else:
+                error = insights_resp.json().get("error", {})
+                frappe.logger().warning(f"Story insights failed: {error.get('message')}")
+
+                # Return zero metrics if insights fail
+                return AnalyticsResult(
+                    success=True,
+                    metrics={
+                        "likes": 0,
+                        "comments": 0,
+                        "shares": 0,
+                        "impressions": 0,
+                        "reach": 0,
+                        "engagement_rate": 0,
+                    },
+                )
+
+        except Exception as e:
+            frappe.logger().error(f"Error fetching story analytics: {str(e)}")
+            return AnalyticsResult(
+                success=False, 
+                error_message=f"Story analytics error: {str(e)}"
+            )

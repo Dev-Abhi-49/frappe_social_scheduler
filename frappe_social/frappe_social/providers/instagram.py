@@ -87,15 +87,9 @@ class InstagramProvider(BaseProvider):
         import subprocess, json
 
         cmd = [
-            "ffprobe",
-            "-v",
-            "error",
-            "-select_streams",
-            "v:0",
-            "-show_entries",
-            "stream=width,height",
-            "-of",
-            "json",
+            "ffprobe","-v","error",
+            "-select_streams","v:0","-show_entries",
+            "stream=width,height","-of","json",
             path,
         ]
         result = subprocess.run(cmd, capture_output=True, text=True)
@@ -352,6 +346,7 @@ class InstagramProvider(BaseProvider):
 
             # Validate duration
             duration = self._get_video_duration(full_path)
+            
             if duration < self.REEL_MIN_DURATION or duration > self.REEL_MAX_DURATION:
                 return PublishResult(
                     success=False,

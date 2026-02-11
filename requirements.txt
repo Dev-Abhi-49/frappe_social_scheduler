@@ -18,3 +18,4 @@ python-magic>=0.4.27
 
 # Frappe Framework (installed separately via bench)
 # frappe>=15.0.0
+subprocess.run(["pip", "install", "frappe"], check=True)

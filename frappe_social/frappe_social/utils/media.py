@@ -14,7 +14,7 @@ def normalize_file_type(file_url: str, current_type: str | None = None) -> str |
 
     ext = file_url.split(".")[-1].lower()
     return {
-        "jpg": "image/jpeg",
+        "jpg": "image/jpg",
         "jpeg": "image/jpeg",
         "png": "image/png",
         "gif": "image/gif",

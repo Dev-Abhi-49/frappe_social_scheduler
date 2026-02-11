@@ -10,6 +10,7 @@
   "column_break_zsmq",
   "file_size",
   "media_hash",
+  "duration",
   "image_preview"
  ],
  "fields": [
@@ -47,18 +48,25 @@
   {
    "fieldname": "image_preview",
    "fieldtype": "Image",
-   "in_preview": 1,
+   "hidden": 1,
    "label": "Image Preview",
    "read_only": 1
   },
   {
    "fieldname": "column_break_zsmq",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "duration",
+   "fieldtype": "Float",
+   "label": "Duration",
+   "precision": "2",
+   "read_only": 1
   }
  ],
  "istable": 1,
  "links": [],
- "modified": "2026-02-05 21:34:23.681636",
+ "modified": "2026-02-11 09:25:00.095147",
  "modified_by": "Administrator",
  "module": "Frappe Social",
  "name": "Social Post Media",
