@@ -209,14 +209,14 @@ class SocialPost(Document):
             file_type = (media_item.file_type or "").lower()
             
             if "video" in file_type:
-                # frappe.throw(_("Instagram Posts do not support videos"))
-                if media_item.file_size > get_provider("Instagram").MAX_VIDEO_SIZE:
-                    size_mb = media_item.file_size / (1024 * 1024)
-                    max_mb = get_provider("Instagram").MAX_VIDEO_SIZE / (1024 * 1024)
-                    frappe.throw(_("Instagram Post videos must be under {0:.2f} MB (got {1:.2f} MB)").format(max_mb, size_mb))
-                if media_item.duration > get_provider("Instagram").MAX_VIDEO_DURATION:
-                    duration = media_item.duration
-                    frappe.throw(_("Instagram Post videos must be under {0} seconds (got {1:.1f}s)").format(get_provider("Instagram").MAX_VIDEO_DURATION, duration))
+                frappe.throw(_("Instagram Posts do not support videos"))
+                # if media_item.file_size > get_provider("Instagram").MAX_VIDEO_SIZE:
+                #     size_mb = media_item.file_size / (1024 * 1024)
+                #     max_mb = get_provider("Instagram").MAX_VIDEO_SIZE / (1024 * 1024)
+                #     frappe.throw(_("Instagram Post videos must be under {0:.2f} MB (got {1:.2f} MB)").format(max_mb, size_mb))
+                # if media_item.duration > get_provider("Instagram").MAX_VIDEO_DURATION:
+                #     duration = media_item.duration
+                #     frappe.throw(_("Instagram Post videos must be under {0} seconds (got {1:.1f}s)").format(get_provider("Instagram").MAX_VIDEO_DURATION, duration))
             else:
                 if len(self.media) > get_provider("Instagram").MAX_IMAGES:
                     frappe.throw(_("Instagram Posts support a maximum of {0} images").format(get_provider("Instagram").MAX_IMAGES))

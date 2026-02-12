@@ -19,6 +19,7 @@ from frappe_social.frappe_social.utils.media import (
     is_video,
     copy_to_public_temp,
     cleanup_temp_files,
+    get_public_url,
 )
 
 class InstagramProvider(BaseProvider):
@@ -38,6 +39,7 @@ class InstagramProvider(BaseProvider):
     
     MAX_IMAGE_SIZE = 8 * 1024 * 1024  # 8 MB
     MAX_VIDEO_SIZE = 100 * 1024 * 1024  # 100 MB
+    MAX_VIDEO_DURATION = 60
     
     MAX_STORY_BATCH = 10
     STORY_MAX_IMAGE_SIZE = 8 * 1024 * 1024  # 8 MB
@@ -53,109 +55,6 @@ class InstagramProvider(BaseProvider):
         self.api_version = self.settings.meta_api_version or "v24.0"
         self.api_base = f"https://graph.facebook.com/{self.api_version}"
         self._temp_public_files = []  # Initialize cleanup list
-
-    # def _copy_to_public_temp(self, private_file_path: str) -> str:
-    #     """Copy private file to public directory temporarily"""
-    #     try:
-    #         full_private_path = self._get_full_path(private_file_path)
-            
-    #         if not os.path.exists(full_private_path):
-    #             frappe.throw(f"File not found: {private_file_path}")
-            
-    #         # Generate unique filename
-    #         filename = Path(private_file_path).name
-    #         timestamp = frappe.utils.now_datetime().strftime("%Y%m%d_%H%M%S_%f")
-    #         unique_filename = f"ig_temp_{timestamp}_{filename}"
-            
-    #         # Public files directory
-    #         public_files_dir = frappe.get_site_path("public", "files")
-    #         os.makedirs(public_files_dir, exist_ok=True)
-            
-    #         public_file_path = os.path.join(public_files_dir, unique_filename)
-            
-    #         # Copy file
-    #         shutil.copy2(full_private_path, public_file_path)
-            
-    #         # Generate public URL
-    #         public_url = frappe.utils.get_url(f"/files/{unique_filename}")
-            
-    #         # Track for cleanup
-    #         if not hasattr(self, '_temp_public_files'):
-    #             self._temp_public_files = []
-    #         self._temp_public_files.append(public_file_path)
-            
-    #         frappe.logger().info(f"Copied private file to public temp: {public_url}")
-    #         return public_url
-            
-    #     except Exception as e:
-    #         frappe.log_error(f"Error copying to public: {str(e)}", "Instagram File Access")
-    #         frappe.throw(f"Could not make file accessible: {str(e)}")
-
-    # def _cleanup_temp_files(self):
-    #     """Clean up temporary public files"""
-    #     if hasattr(self, '_temp_public_files') and self._temp_public_files:
-    #         for temp_file in self._temp_public_files:
-    #             try:
-    #                 if os.path.exists(temp_file):
-    #                     os.remove(temp_file)
-    #                     frappe.logger().info(f"Cleaned up temp file: {temp_file}")
-    #             except Exception as e:
-    #                 frappe.logger().warning(f"Could not delete {temp_file}: {str(e)}")
-    #         self._temp_public_files = []
-
-    # def _is_video(self, file_path: str) -> bool:
-    #     """Check if file is a video"""
-    #     return file_path.lower().endswith((".mp4", ".mov"))
-
-    # def _is_image(self, file_path: str) -> bool:
-    #     """Check if file is an image"""
-    #     return file_path.lower().endswith((".jpg", ".jpeg", ".png"))
-
-    # def _get_video_duration(self, path: str) -> float:
-    #     """Return video duration in seconds using ffprobe"""
-    #     try:
-    #         cmd = [
-    #             "ffprobe",
-    #             "-v", "error",
-    #             "-show_entries", "format=duration",
-    #             "-of", "json",
-    #             path,
-    #         ]
-    #         result = subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=30)
-    #         data = json.loads(result.stdout)
-    #         return float(data["format"]["duration"])
-    #     except subprocess.TimeoutExpired:
-    #         frappe.throw(f"Video duration check timed out for: {path}")
-    #     except FileNotFoundError:
-    #         frappe.throw(
-    #             "FFmpeg not installed. Please contact your administrator to install FFmpeg "
-    #             "by adding 'ffmpeg' to apt-packages.txt"
-    #         )
-    #     except Exception as e:
-    #         frappe.log_error(f"Error getting video duration: {str(e)}", "Video Duration Error")
-    #         raise
-
-    # def _get_video_dimensions(self, path: str):
-    #     """Return (width, height) of the video using ffprobe"""
-    #     try:
-    #         cmd = [
-    #             "ffprobe", "-v", "error",
-    #             "-select_streams", "v:0",
-    #             "-show_entries", "stream=width,height",
-    #             "-of", "json",
-    #             path,
-    #         ]
-    #         result = subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=30)
-    #         data = json.loads(result.stdout)
-    #         stream = data["streams"][0]
-    #         return int(stream["width"]), int(stream["height"])
-    #     except subprocess.TimeoutExpired:
-    #         frappe.throw(f"Video dimension check timed out for: {path}")
-    #     except FileNotFoundError:
-    #         frappe.throw("FFmpeg not installed. Please contact your administrator.")
-    #     except Exception as e:
-    #         frappe.log_error(f"Error getting video dimensions: {str(e)}", "Video Dimensions Error")
-    #         raise
 
     def publish_post(
         self, content: str = None, media_files: list = None, scheduled_time=None, **kwargs
@@ -187,7 +86,7 @@ class InstagramProvider(BaseProvider):
 
         except Exception as e:
             # Cleanup on any error
-            self._cleanup_temp_files()
+            cleanup_temp_files(self._temp_public_files)
             frappe.log_error(
                 title="Instagram Publish Error",
                 message=f"Error: {str(e)}\nTraceback: {frappe.get_traceback()}",
@@ -216,7 +115,7 @@ class InstagramProvider(BaseProvider):
             return self._publish_carousel(content, media_files, page_token, instagram_id)
 
         except Exception as e:
-            self.cleanup_temp_files()  # Added cleanup
+            cleanup_temp_files(self._temp_public_files)  # Added cleanup
             frappe.log_error(title="Instagram Feed Post Error", message=f"{str(e)}\n{frappe.get_traceback()}")
             return PublishResult(success=False, error_message=str(e))
 
@@ -226,7 +125,7 @@ class InstagramProvider(BaseProvider):
         """Publish single image or video to Instagram feed"""
         try:
             file_url = getattr(media_file, "file_url", None) or media_file
-            public_url = self._get_public_url(file_url)
+            public_url = get_public_url(file_url, self._temp_public_files)  # Get public URL and track for cleanup
             # is_video = self._is_video(file_url)
 
             # # INSTAGRAM API CHANGE: All single videos must be published as REELS
@@ -260,7 +159,7 @@ class InstagramProvider(BaseProvider):
             ).json()
 
             if "id" not in container_resp:
-                self.cleanup_temp_files()  # Added cleanup
+                cleanup_temp_files(self._temp_public_files)  # Added cleanup
                 return self._handle_error(container_resp, "Container creation failed")
 
             container_id = container_resp["id"]
@@ -273,7 +172,7 @@ class InstagramProvider(BaseProvider):
             ).json()
 
             if "id" not in publish_resp:
-                self.cleanup_temp_files()  # Added cleanup
+                cleanup_temp_files(self._temp_public_files)  # Added cleanup
                 return self._handle_error(publish_resp, "Publishing failed")
 
             media_id = publish_resp["id"]
@@ -283,12 +182,12 @@ class InstagramProvider(BaseProvider):
             post_url = permalink or f"https://www.instagram.com/p/{media_id}"
 
             # Cleanup temp files after successful publish
-            self.cleanup_temp_files()
+            cleanup_temp_files(self._temp_public_files)
             
             return PublishResult(success=True, post_id=media_id, post_url=post_url)
 
         except Exception as e:
-            self.cleanup_temp_files()  # Added cleanup
+            cleanup_temp_files(self._temp_public_files)  # Added cleanup
             frappe.log_error(title="Instagram Single Media Error", message=f"{str(e)}\n{frappe.get_traceback()}")
             return PublishResult(success=False, error_message=str(e))
 
@@ -302,15 +201,15 @@ class InstagramProvider(BaseProvider):
             # STEP 1: Create item containers
             for media_file in media_files:
                 file_url = getattr(media_file, "file_url", None) or media_file
-                public_url = self._get_public_url(file_url)
-                is_video = is_video(file_url)
+                public_url = get_public_url(file_url, self._temp_public_files)  # Track temp files for cleanup
+                is_video_file = is_video(file_url)
 
                 item_data = {
                     "access_token": page_token,
                     "is_carousel_item": "true",
                 }
 
-                if is_video:
+                if is_video_file:
                     item_data["media_type"] = "VIDEO"
                     item_data["video_url"] = public_url
                 else:
@@ -323,16 +222,16 @@ class InstagramProvider(BaseProvider):
                 ).json()
 
                 if "id" not in item_resp:
-                    self.cleanup_temp_files()  # Added cleanup
+                    cleanup_temp_files(self._temp_public_files)  # Added cleanup
                     return self._handle_error(item_resp, f"Carousel item creation failed for {file_url}")
 
                 item_id = item_resp["id"]
 
                 # Wait for video processing if needed
-                if is_video:
+                if is_video_file:
                     processing_result = self._wait_for_media_processing(item_id, page_token, max_retries=40, delay=5)
                     if not processing_result["success"]:
-                        self.cleanup_temp_files()  # Added cleanup
+                        cleanup_temp_files(self._temp_public_files)  # Added cleanup
                         return PublishResult(
                             success=False,
                             error_message=f"Video processing failed for carousel item: {processing_result['message']}",
@@ -355,7 +254,7 @@ class InstagramProvider(BaseProvider):
             ).json()
 
             if "id" not in carousel_resp:
-                self.cleanup_temp_files()  # Added cleanup
+                cleanup_temp_files(self._temp_public_files)  # Added cleanup
                 return self._handle_error(carousel_resp, "Carousel container creation failed")
 
             carousel_id = carousel_resp["id"]
@@ -368,7 +267,7 @@ class InstagramProvider(BaseProvider):
             ).json()
 
             if "id" not in publish_resp:
-                self.cleanup_temp_files()  # Added cleanup
+                cleanup_temp_files(self._temp_public_files)  # Added cleanup
                 return self._handle_error(publish_resp, "Carousel publishing failed")
 
             media_id = publish_resp["id"]
@@ -378,12 +277,12 @@ class InstagramProvider(BaseProvider):
             post_url = permalink or f"https://www.instagram.com/p/{media_id}"
 
             # Cleanup temp files after successful publish
-            self.cleanup_temp_files()
+            cleanup_temp_files(self._temp_public_files)
             
             return PublishResult(success=True, post_id=media_id, post_url=post_url)
 
         except Exception as e:
-            self.cleanup_temp_files()  # Added cleanup
+            cleanup_temp_files(self._temp_public_files)  # Added cleanup
             frappe.log_error(title="Instagram Carousel Error", message=f"{str(e)}\n{frappe.get_traceback()}")
             return PublishResult(success=False, error_message=str(e))
 
@@ -401,7 +300,7 @@ class InstagramProvider(BaseProvider):
             return PublishResult(success=False, error_message="Reels require video files (.mp4 or .mov)")
 
         try:
-            full_path = self._get_full_path(file_url)
+            full_path = get_full_path(file_url)
 
             if not os.path.exists(full_path):
                 return PublishResult(success=False, error_message=f"File not found: {full_path}")
@@ -450,7 +349,7 @@ class InstagramProvider(BaseProvider):
             # except Exception as e:
             #     frappe.logger().warning(f"Could not validate video dimensions: {str(e)}")
 
-            public_url = self._get_public_url(file_url)
+            public_url = get_public_url(file_url, self._temp_public_files)  # Track temp files for cleanup
 
             # STEP 1: Create reel container
             container_data = {
@@ -476,7 +375,7 @@ class InstagramProvider(BaseProvider):
             ).json()
 
             if "id" not in container_resp:
-                self.cleanup_temp_files()  # Added cleanup
+                cleanup_temp_files(self._temp_public_files)  # Added cleanup
                 return self._handle_error(container_resp, "Reel container creation failed")
 
             container_id = container_resp["id"]
@@ -486,7 +385,7 @@ class InstagramProvider(BaseProvider):
                 container_id, page_token, max_retries=60, delay=10
             )
             if not processing_result["success"]:
-                self.cleanup_temp_files()  # Added cleanup
+                cleanup_temp_files(self._temp_public_files)  # Added cleanup
                 return PublishResult(
                     success=False, error_message=f"Video processing failed: {processing_result['message']}"
                 )
@@ -499,7 +398,7 @@ class InstagramProvider(BaseProvider):
             ).json()
 
             if "id" not in publish_resp:
-                self.cleanup_temp_files()  # Added cleanup
+                cleanup_temp_files(self._temp_public_files)  # Added cleanup
                 return self._handle_error(publish_resp, "Reel publishing failed")
 
             media_id = publish_resp["id"]
@@ -509,12 +408,12 @@ class InstagramProvider(BaseProvider):
             post_url = permalink or f"https://www.instagram.com/reel/{media_id}"
 
             # Cleanup temp files after successful publish
-            self.cleanup_temp_files()
+            cleanup_temp_files(self._temp_public_files)
             
             return PublishResult(success=True, post_id=media_id, post_url=post_url)
 
         except Exception as e:
-            self.cleanup_temp_files()  # Added cleanup
+            cleanup_temp_files(self._temp_public_files)  # Added cleanup
             frappe.log_error(title="Instagram Reel Error", message=f"{str(e)}\n{frappe.get_traceback()}")
             return PublishResult(success=False, error_message=f"Reel creation failed: {str(e)}")
 
@@ -536,18 +435,18 @@ class InstagramProvider(BaseProvider):
         file_url = getattr(file_doc, "file_url", None) or file_doc
 
         try:
-            full_path = self._get_full_path(file_url)
+            full_path = get_full_path(file_url)
 
             if not os.path.exists(full_path):
                 return PublishResult(success=False, error_message=f"File not found: {full_path}")
 
-            is_video = is_video(file_url)
-            public_url = self._get_public_url(file_url)
+            is_video_file = is_video(file_url)
+            public_url = get_public_url(file_url, self._temp_public_files)  # Track temp files for cleanup
 
             # Validate file size and duration
             file_size = os.path.getsize(full_path)
 
-            if is_video:
+            if is_video_file:
                 if file_size > self.STORY_MAX_VIDEO_SIZE:
                     return PublishResult(success=False, error_message="Story video exceeds 100MB limit")
 
@@ -578,7 +477,7 @@ class InstagramProvider(BaseProvider):
                 "media_type": "STORIES",
             }
 
-            if is_video:
+            if is_video_file:
                 container_data["video_url"] = public_url
             else:
                 container_data["image_url"] = public_url
@@ -590,16 +489,16 @@ class InstagramProvider(BaseProvider):
             ).json()
 
             if "id" not in container_resp:
-                self.cleanup_temp_files()  # Added cleanup
+                cleanup_temp_files(self._temp_public_files)  # Added cleanup
                 return self._handle_error(container_resp, "Story container creation failed")
 
             container_id = container_resp["id"]
 
             # STEP 2: Wait for processing (if video)
-            if is_video:
+            if is_video_file:
                 processing_result = self._wait_for_media_processing(container_id, page_token, max_retries=40, delay=5)
                 if not processing_result["success"]:
-                    self.cleanup_temp_files()  # Added cleanup
+                    cleanup_temp_files(self._temp_public_files)  # Added cleanup
                     return PublishResult(
                         success=False, error_message=f"Story processing failed: {processing_result['message']}"
                     )
@@ -612,7 +511,7 @@ class InstagramProvider(BaseProvider):
             ).json()
 
             if "id" not in publish_resp:
-                self.cleanup_temp_files()  # Added cleanup
+                cleanup_temp_files(self._temp_public_files)  # Added cleanup
                 return self._handle_error(publish_resp, "Story publishing failed")
 
             story_id = publish_resp["id"]
@@ -622,12 +521,12 @@ class InstagramProvider(BaseProvider):
             post_url = permalink or f"https://www.instagram.com/stories/{instagram_id}/{story_id}"
 
             # Cleanup temp files after successful publish
-            self.cleanup_temp_files()
+            cleanup_temp_files(self._temp_public_files)
             
             return PublishResult(success=True, post_id=story_id, post_url=post_url)
 
         except Exception as e:
-            self.cleanup_temp_files()  # Added cleanup
+            cleanup_temp_files(self._temp_public_files)  # Added cleanup
             frappe.log_error(title="Instagram Story Error", message=f"{str(e)}\n{frappe.get_traceback()}")
             return PublishResult(success=False, error_message=f"Story creation failed: {str(e)}")
 

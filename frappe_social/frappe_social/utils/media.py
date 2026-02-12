@@ -1,5 +1,6 @@
-import mimetypes, os , subprocess, json, mimetypes, frappe
+import mimetypes, os , subprocess, shutil, json, frappe
 from frappe import _
+from pathlib import Path
 
 
 def normalize_file_type(file_url: str, current_type: str | None = None) -> str | None:
@@ -154,11 +155,19 @@ def get_video_dimensions(path: str) -> tuple:
         frappe.throw(_("Error reading video dimensions: {0}").format(str(e)))
         
 # ===================================== Instgram ===============================================
-
-def copy_to_public_temp(self, private_file_path: str) -> str:
-    """Copy private file to public directory temporarily"""
+def copy_to_public_temp(private_file_path: str, temp_files_list: list) -> str:
+    """
+    Copy private file to public directory temporarily
+    
+    Args:
+        private_file_path: Path to the private file
+        temp_files_list: List to track temp files for cleanup
+        
+    Returns:
+        Public URL of the copied file
+    """
     try:
-        full_private_path = self._get_full_path(private_file_path)
+        full_private_path = get_full_path(private_file_path)
         
         if not os.path.exists(full_private_path):
             frappe.throw(f"File not found: {private_file_path}")
@@ -181,9 +190,7 @@ def copy_to_public_temp(self, private_file_path: str) -> str:
         public_url = frappe.utils.get_url(f"/files/{unique_filename}")
         
         # Track for cleanup
-        if not hasattr(self, '_temp_public_files'):
-            self._temp_public_files = []
-        self._temp_public_files.append(public_file_path)
+        temp_files_list.append(public_file_path)
         
         frappe.logger().info(f"Copied private file to public temp: {public_url}")
         return public_url
@@ -192,14 +199,48 @@ def copy_to_public_temp(self, private_file_path: str) -> str:
         frappe.log_error(f"Error copying to public: {str(e)}", "Instagram File Access")
         frappe.throw(f"Could not make file accessible: {str(e)}")
 
-def cleanup_temp_files(self):
-    """Clean up temporary public files"""
-    if hasattr(self, '_temp_public_files') and self._temp_public_files:
-        for temp_file in self._temp_public_files:
+
+def cleanup_temp_files(temp_files_list: list):
+    """
+    Clean up temporary public files
+    
+    Args:
+        temp_files_list: List of temporary file paths to delete
+    """
+    if temp_files_list:
+        for temp_file in temp_files_list:
             try:
                 if os.path.exists(temp_file):
                     os.remove(temp_file)
                     frappe.logger().info(f"Cleaned up temp file: {temp_file}")
             except Exception as e:
-                    frappe.logger().warning(f"Could not delete {temp_file}: {str(e)}")
-            self._temp_public_files = []
+                frappe.logger().warning(f"Could not delete {temp_file}: {str(e)}")
+        
+        # Clear the list after cleanup
+        temp_files_list.clear()
+
+
+def get_public_url(file_path: str, temp_files_list: list) -> str:
+    """
+    Get publicly accessible URL for Instagram API
+    
+    Args:
+        file_path: File path or URL
+        temp_files_list: List to track temp files for cleanup
+        
+    Returns:
+        Public URL that Instagram API can access
+    """
+    if not file_path:
+        frappe.throw("Empty file path provided")
+    
+    # Already a URL
+    if file_path.startswith("http"):
+        return file_path
+    
+    # Check if file is in private directory
+    if "/private/files/" in file_path:
+        return copy_to_public_temp(file_path, temp_files_list)
+    
+    # Public files can be accessed directly
+    return frappe.utils.get_url(file_path)
