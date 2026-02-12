@@ -5,8 +5,15 @@ from frappe import _
 import subprocess, json
 import os
 from frappe.model.document import Document
-from frappe_social.frappe_social.utils.media import normalize_file_type
-
+from frappe_social.frappe_social.providers import get_provider
+from frappe_social.frappe_social.utils.media import (
+    get_full_path,
+    get_video_duration,
+    get_video_dimensions,
+    is_video,
+    is_image,
+    normalize_file_type,
+)
 
 class SocialPost(Document):
 
@@ -24,37 +31,39 @@ class SocialPost(Document):
 
     def before_save(self):
         """Handle defaults before saving"""
-        # For Instagram, ensure at least one content type is selected
+
         if self.platform == "Instagram":
             if not (self.is_ig_post or self.is_ig_reel or self.is_ig_story):
-                return None
+                frappe.throw(
+                _("Please select any one Instagram content type: Post, Reel, or Story"),
+                title=_("Content Type"),
+            )
 
-        # For Facebook, ensure at least one content type is selected
         elif self.platform == "Facebook":
             if not (self.is_fb_post or self.is_fb_reel or self.is_fb_story):
-                return None
+                frappe.throw(
+                    _("Please select any one Facebook content type: Post, Reel, or Story"),
+                    title=_("Content Type"),
+                )
 
     def validate(self):
         """Validate the post before saving/submitting"""
-        # 1. Fix media metadata first
+        
         self.fix_media_metadata()
-
-        # 2. Platform-specific validations
-        if self.platform == "Facebook":
-            self.validate_facebook_content()
-        elif self.platform == "Instagram":
-            self.validate_instagram_content()
-        elif self.platform == "YouTube":
-            self.validate_youtube_content()
-            
-        elif self.platform == "LinkedIn":
-            pass
-        elif self.platform == "Twitter":
-            pass
+    
+        switch = {
+            "Facebook": self.validate_facebook_content,
+            "Instagram": self.validate_instagram_content,
+            "YouTube": self.validate_youtube_content,
+            "LinkedIn": lambda: None,
+            "Twitter": lambda: None,
+        }
+        
+        if self.platform in switch:
+            switch[self.platform]()
         else:
             frappe.throw(_("Unsupported platform: {0}").format(self.platform))
 
-        # 3. General validations
         self.validate_content_length()
         self.validate_media()
         
@@ -79,134 +88,68 @@ class SocialPost(Document):
                 item.file,
                 (db_file.file_type if db_file else item.file_type),
             )
-            
-    def _get_full_path(self, file_path: str) -> str:
-        """Get absolute local file path - consistent with provider logic"""
-        if not file_path:
-            raise ValueError("Empty file path")
-        
-        file_path = file_path.strip()
-        
-        # Handle Frappe's file path conventions
-        mappings = (
-            ("/private/files/", ("private", "files")),
-            ("/public/files/", ("public", "files")),
-            ("/files/", ("public", "files")),
-        )
-        
-        for prefix, site_path in mappings:
-            if file_path.startswith(prefix):
-                relative = file_path[len(prefix):]
-                return frappe.get_site_path(*site_path, relative)
-        
-        return frappe.get_site_path(file_path.lstrip("/"))
-            
-    def _get_video_duration(self, path: str) -> float:
-        if not os.path.exists(path):
-            frappe.throw(_("File not found: {0}").format(path))
-
-        try:
-            cmd = [
-                "ffprobe", "-v", "error",
-                "-show_entries", "format=duration",
-                "-of", "json",
-                path,
-            ]
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-            
-            data = json.loads(result.stdout)
-            duration = float(data.get("format", {}).get("duration", 0))
-            
-            if duration <= 0:
-                frappe.throw(_("Could not determine video duration"))
-                
-            return duration
-        
-        except Exception as e:
-            frappe.throw(_("Error reading video duration: {0}").format(str(e)))
-
-
-    def _get_video_dimensions(self, path: str) -> tuple:
-        """Get video width and height using ffprobe"""
-        if not os.path.exists(path):
-            frappe.throw(_("Video file not found: {0}").format(path))
-        
-        try:
-            cmd = [
-                "ffprobe", "-v", "error",
-                "-select_streams", "v:0",
-                "-show_entries", "stream=width,height",
-                "-of", "json",
-                path,
-            ]
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-            
-            if result.returncode != 0:
-                frappe.throw(_("Failed to read video dimensions: {0}").format(result.stderr))
-            
-            data = json.loads(result.stdout)
-            streams = data.get("streams", [])
-            
-            if not streams:
-                frappe.throw(_("No video stream found in file"))
-            
-            stream = streams[0]
-            width = stream.get("width")
-            height = stream.get("height")
-            
-            if not width or not height:
-                frappe.throw(_("Could not determine video dimensions"))
-            
-            return int(width), int(height)
-        
-        except Exception as e:
-            frappe.throw(_("Error reading video dimensions: {0}").format(str(e)))
     
     def validate_facebook_content(self):
-        """Facebook-specific validations"""
-        selected_types = sum([self.is_fb_post or 0, self.is_fb_reel or 0, self.is_fb_story or 0])
-        if selected_types > 1:
-            frappe.throw(
-                _("Please select only one Facebook content type: Post, Reel, or Story"),
-                title=_("Multiple Content Types Selected"),
-            )
-            
+        """Facebook-specific validations"""            
         # Post validation
-        if self.is_fb_post:
-            pass
+        if self.is_fb_post:           
+            for media_item in self.media:
+                file_type = (media_item.file_type or "").lower()
+                full_path = get_full_path(media_item.file)
+
+                if "video" in file_type:
+                    if media_item.file_size > get_provider("Facebook").MAX_VIDEO_SIZE: # 4GB
+                        size_mb = media_item.file_size / (1024 * 1024)
+                        max_mb = get_provider("Facebook").MAX_VIDEO_SIZE / (1024 * 1024)
+                        frappe.throw(_("Facebook Post videos must be under {0:.2f} MB (got {1:.2f} MB)").format(max_mb, size_mb))
+                    
+                    duration = get_video_duration(full_path)
+                    media_item.duration = duration
+                    
+                    if duration > get_provider("Facebook").MAX_VIDEO_DURATION:
+                        duration = media_item.duration
+                        frappe.throw(_("Facebook Post videos must be less than or equal to {0} seconds (got {1:.1f}s)").format(get_provider("Facebook").MAX_VIDEO_DURATION, duration))
+                else:
+                    if media_item.file_size > get_provider("Facebook").MAX_IMAGE_SIZE: # 30MB
+                        size_mb = media_item.file_size / (1024 * 1024)
+                        max_mb = get_provider("Facebook").MAX_IMAGE_SIZE / (1024 * 1024)
+                        frappe.throw(_("Facebook Post images must be under {0:.2f} MB (got {1:.2f} MB)").format(max_mb, size_mb))
         
         # Reel Validation 
         if self.is_fb_reel:
             if not self.media or len(self.media) != 1:
                 frappe.throw(_("Facebook Reels require one video file"))
-                # Check if media is a video
+
             media_item = self.media[0]
-            
             file_type = (media_item.file_type or "").lower()
+            
             if "video" not in file_type:
                 frappe.throw(_("Facebook Reels require video files (.mp4 or .mov)"))
             
-            full_path = self._get_full_path(media_item.file)
-            if media_item.file_size > 1024 * 1024 * 1024:
-                frappe.throw(_("Facebook Reels must be under 1GB"))
+            full_path = get_full_path(media_item.file)
+            if media_item.file_size > get_provider("Facebook").REEL_MAX_VIDEO_SIZE: # 1GB
+                size_mb = media_item.file_size / (1024 * 1024)
+                max_mb = get_provider("Facebook").REEL_MAX_VIDEO_SIZE / (1024 * 1024)
+                frappe.throw(_("Facebook Reels must be under {0:.2f} MB (got {1:.2f} MB)").format(max_mb, size_mb))
                 
-            duration = self._get_video_duration(full_path)
+            duration = get_video_duration(full_path)
             media_item.duration = duration
             
-            if duration < 3 or duration > 90:
+            if duration < get_provider("Facebook").REEL_MIN_DURATION or duration > get_provider("Facebook").REEL_MAX_DURATION:
+                duration = media_item.duration
                 frappe.throw(_("Facebook Reels must be between 3 and 90 seconds (got {0:.1f}s)").format(duration))
             
-            width, height = self._get_video_dimensions(full_path)
-            if height <= width:
-                frappe.throw(
-                    _("Facebook Reels must be vertical (portrait). Got {0}x{1}").format(width, height)
-                )
+            # width, height = get_video_dimensions(full_path)
+            # if height <= width:
+            #     frappe.throw(
+            #         _("Facebook Reels must be vertical (portrait). Got {0}x{1}").format(width, height)
+            #     )
                 
-            ratio = height / width
-            if ratio < 1.3:
-                frappe.throw(
-                    _("Facebook Reels should be 9:16 aspect ratio. Got {0:.2f}:1").format(ratio)
-                )
+            # ratio = height / width
+            # if ratio < 1.3:
+            #     frappe.throw(
+            #         _("Facebook Reels should be 9:16 aspect ratio. Got {0:.2f}:1").format(ratio)
+            #     )
         
         if self.is_fb_story:
             if not self.media or len(self.media) == 0:
@@ -217,17 +160,19 @@ class SocialPost(Document):
             
             media_item = self.media[0]
             file_type = (media_item.file_type or "").lower()
-            full_path = self._get_full_path(media_item.file)
+            full_path = get_full_path(media_item.file)
 
             if "video" in file_type:
-                # Check file size (100MB limit for story videos)
-                if media_item.file_size > 100 * 1024 * 1024:
-                    frappe.throw(_("Facebook Story videos must be under 100MB"))
+                if media_item.file_size > get_provider("Facebook").STORY_MAX_VIDEO_SIZE: # 100MB
+                    size_mb = media_item.file_size / (1024 * 1024)
+                    max_mb = get_provider("Facebook").STORY_MAX_VIDEO_SIZE / (1024 * 1024)
+                    frappe.throw(_("Facebook Story videos must be under {0:.2f} MB (got {1:.2f} MB)").format(max_mb, size_mb))
                 
-                duration = self._get_video_duration(full_path)
+                duration = get_video_duration(full_path)
                 media_item.duration = duration
                 
-                if duration > 60:
+                if duration > get_provider("Facebook").STORY_MAX_VIDEO_DURATION:
+                    duration = media_item.duration
                     frappe.throw(_("Facebook Story videos must be between 1- 120 seconds (got {0:.1f}s)").format(duration))
 
                 # width, height = self._get_video_dimensions(full_path)
@@ -237,10 +182,11 @@ class SocialPost(Document):
                 #         _("Facebook Story videos must be vertical. Got {0}x{1}").format(width, height)
                 #     )
 
-            elif "image" in file_type:
-                # ✅ Check file size (8MB limit for story images)
-                if media_item.file_size > 8 * 1024 * 1024:
-                    frappe.throw(_("Facebook Story images must be under 8MB"))
+            else:
+                if media_item.file_size > get_provider("Facebook").STORY_MAX_IMAGE_SIZE: # 8MB
+                    size_mb = media_item.file_size / (1024 * 1024)
+                    max_mb = get_provider("Facebook").STORY_MAX_IMAGE_SIZE / (1024 * 1024)
+                    frappe.throw(_("Facebook Story images must be under {0:.2f} MB (got {1:.2f} MB)").format(max_mb, size_mb))
                 
                 # try:
                 #     with image.open(full_path) as img:
@@ -250,50 +196,88 @@ class SocialPost(Document):
                 #         #     )
                 # except Exception as e:
                 #     frappe.throw(_("Failed to read image file: {0}").format(str(e)))
-            else:
-                frappe.throw(_("Facebook Stories require either an image or video file"))
 
     def validate_instagram_content(self):
         """Instagram-specific validations"""
-        # Ensure only one content type is selected
-        selected_types = sum([self.is_ig_post or 0, self.is_ig_reel or 0, self.is_ig_story or 0])
-
-        if selected_types > 1:
-            frappe.throw(
-                _("Please select only one Instagram content type: Post, Reel, or Story"),
-                title=_("Multiple Content Types Selected"),
-            )
-
-        # Story-specific validations
-        if self.is_ig_story:
-            if not self.media or len(self.media) == 0:
-                frappe.throw(_("Instagram Stories require at least one media file"))
-
-        # Reel-specific validations
-        if self.is_ig_reel:
-            if not self.media or len(self.media) != 1:
-                frappe.throw(_("Instagram Reels require exactly one video file"))
-
-            # Check if media is a video
-            media_item = self.media[0]
-            file_type = (media_item.file_type or "").lower()
-            
-            if "video" not in file_type:
-                frappe.throw(_("Instagram Reels require video files (.mp4 or .mov)"))
-
-            full_path = self._get_full_path(media_item.file)
-            duration = self._get_video_duration(full_path)
-            media_item.duration = duration  # ✅ SAVE IT
         
-        # Add duration validation if needed
-            if duration < 3 or duration > 90:
-                frappe.throw(_("Instagram Reels must be between 3 and 90 seconds (got {0:.1f}s)").format(duration))
-
         # Post-specific validations
         if self.is_ig_post:
             if not self.media or len(self.media) == 0:
                 frappe.throw(_("Instagram Posts require at least one media file"))
+                
+            media_item = self.media[0]
+            file_type = (media_item.file_type or "").lower()
+            
+            if "video" in file_type:
+                # frappe.throw(_("Instagram Posts do not support videos"))
+                if media_item.file_size > get_provider("Instagram").MAX_VIDEO_SIZE:
+                    size_mb = media_item.file_size / (1024 * 1024)
+                    max_mb = get_provider("Instagram").MAX_VIDEO_SIZE / (1024 * 1024)
+                    frappe.throw(_("Instagram Post videos must be under {0:.2f} MB (got {1:.2f} MB)").format(max_mb, size_mb))
+                if media_item.duration > get_provider("Instagram").MAX_VIDEO_DURATION:
+                    duration = media_item.duration
+                    frappe.throw(_("Instagram Post videos must be under {0} seconds (got {1:.1f}s)").format(get_provider("Instagram").MAX_VIDEO_DURATION, duration))
+            else:
+                if len(self.media) > get_provider("Instagram").MAX_IMAGES:
+                    frappe.throw(_("Instagram Posts support a maximum of {0} images").format(get_provider("Instagram").MAX_IMAGES))
+                if media_item.file_size > get_provider("Instagram").MAX_IMAGE_SIZE:
+                    size_mb = media_item.file_size / (1024 * 1024)
+                    max_mb = get_provider("Instagram").MAX_IMAGE_SIZE / (1024 * 1024)
+                    frappe.throw(_("Instagram Post images must be under {0:.2f} MB (got {1:.2f} MB)").format(max_mb, size_mb))
+                    
+         # Reel-specific validations
+        if self.is_ig_reel:
+            if not self.media or len(self.media) != 1:
+                frappe.throw(_("Instagram Reels require exactly one video file"))
 
+            media_item = self.media[0]
+            file_type = (media_item.file_type or "").lower()
+            
+            if "video" not in file_type:
+                frappe.throw(_("Instagram Reels require video files"))
+
+            if media_item.file_size > get_provider("Instagram").REEL_MAX_VIDEO_SIZE:
+                size_mb = media_item.file_size / (1024 * 1024)
+                max_mb = get_provider("Instagram").REEL_MAX_VIDEO_SIZE / (1024 * 1024)
+                frappe.throw(_("Instagram Reels must be under {0:.2f} MB (got {1:.2f} MB)").format(max_mb, size_mb))
+
+            full_path = get_full_path(media_item.file)
+            duration = get_video_duration(full_path)
+            media_item.duration = duration  
+            
+            if duration < get_provider("Instagram").REEL_MIN_DURATION or duration > get_provider("Instagram").REEL_MAX_DURATION:
+                frappe.throw(_("Instagram Reels must be between 3 and 90 seconds (got {0:.1f}s)").format(duration))
+                
+        # Story-specific validations
+        if self.is_ig_story:
+            if not self.media or len(self.media) == 0:
+                frappe.throw(_("Instagram Stories require at least one media file"))
+            
+            if len(self.media) > 10:
+                frappe.throw(_("Instagram Stories support a maximum of 10 media files"))
+                
+            media_item = self.media[0]
+            file_type = (media_item.file_type or "").lower()
+            full_path = get_full_path(media_item.file)
+
+            if "video" in file_type:
+                # Check file size (100MB limit for story videos)
+                if media_item.file_size > get_provider("Instagram").MAX_STORY_VIDEO_SIZE:
+                    size_mb = media_item.file_size / (1024 * 1024)
+                    max_mb = get_provider("Instagram").MAX_STORY_VIDEO_SIZE / (1024 * 1024)
+                    frappe.throw(_("Instagram Story videos must be under {0:.2f} MB (got {1:.2f} MB)").format(max_mb, size_mb))
+                    
+                duration = get_video_duration(full_path)
+                media_item.duration = duration
+                
+                if duration > get_provider("Instagram").MAX_STORY_VIDEO_DURATION:
+                    frappe.throw(_("Instagram Story videos must be less than or equal to {0} seconds (got {1:.1f}s)").format(get_provider("Instagram").MAX_STORY_VIDEO_DURATION, duration))
+            else:
+                # Check file size (8MB limit for story images)
+                if media_item.file_size > get_provider("Instagram").STORY_MAX_IMAGE_SIZE:
+                    size_mb = media_item.file_size / (1024 * 1024)
+                    max_mb = get_provider("Instagram").STORY_MAX_IMAGE_SIZE / (1024 * 1024)
+                    frappe.throw(_("Instagram Story images must be under {0:.2f} MB (got {1:.2f} MB)").format(max_mb, size_mb))
 
     def validate_youtube_content(self):
         """YouTube-specific validations"""
@@ -303,17 +287,20 @@ class SocialPost(Document):
         # Check if media is a video
         media_item = self.media[0]
         file_type = (media_item.file_type or "").lower()
+        
+        if media_item.file_size > get_provider("YouTube").MAX_VIDEO_SIZE:
+            size_mb = media_item.file_size / (1024 * 1024)
+            max_mb = get_provider("YouTube").MAX_VIDEO_SIZE / (1024 * 1024)
+            frappe.throw(_("YouTube videos must be under {0:.2f} MB (got {1:.2f} MB)").format(max_mb, size_mb))
+            
         if "video" not in file_type:
             frappe.throw(_("YouTube requires video files"))
 
         if not self.video_title:
             frappe.throw(_("YouTube videos require a title"))
 
-
     def validate_content_length(self):
         """Validate content length against platform limits"""
-        from frappe_social.frappe_social.providers import get_provider
-
         if not self.platform:
             return
 
@@ -331,7 +318,6 @@ class SocialPost(Document):
 
     def validate_media(self):
         """Validate media files against platform requirements"""
-        from frappe_social.frappe_social.providers import get_provider
 
         if not self.platform or not self.media:
             return
@@ -340,9 +326,9 @@ class SocialPost(Document):
         num_media = len(self.media)
         num_videos = 0
 
-        if num_media > provider_class.MAX_MEDIA_COUNT:
+        if num_media > provider_class.MAX_IMAGES:
             frappe.throw(
-                f"Too many media files for {self.platform}: {num_media} > {provider_class.MAX_MEDIA_COUNT}"
+                f"Too many media files for {self.platform}: {num_media} > {provider_class.MAX_IMAGES}"
             )
 
         for media in self.media:

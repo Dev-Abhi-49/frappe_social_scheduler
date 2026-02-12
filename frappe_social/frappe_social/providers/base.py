@@ -16,6 +16,13 @@ class PublishResult:
     error_message: Optional[str] = None
     raw_response: Optional[Dict] = None
 
+@dataclass
+class UploadSession:
+    session_id: str
+    video_id: Optional[str] = None
+    start_offset: int = 0
+    end_offset: int = 0
+
 
 @dataclass
 class AnalyticsResult:
