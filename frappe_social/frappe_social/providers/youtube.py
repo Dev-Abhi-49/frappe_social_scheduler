@@ -14,14 +14,25 @@ from frappe_social.frappe_social.providers.base import BaseProvider, PublishResu
 
 class YouTubeProvider(BaseProvider):
     PLATFORM = "YouTube"
-    MAX_CONTENT_LENGTH = 5000  
+    MAX_CONTENT_LENGTH = 5000
+    
+    SUPPORTS_IMAGES = True
     SUPPORTS_VIDEO = True
+    
     UPLOAD_QUOTA_COST = 1600
-    MAX_MEDIA_COUNT = 1
-    ALLOWED_IMAGE_TYPES = []
+    MAX_VIDEO = 1
+    MAX_IMAGES = 10
+    
+    ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/jpg", "image/gif"]
     ALLOWED_VIDEO_TYPES = ["video/mp4", "video/mov"]
+    
+    DAILY_POST_LIMIT = 10000
     ALLOWS_MULTI_VIDEO = False
-    MAX_VIDEO_SIZE = 256 * 1024 * 1024 * 1024
+    ALLOWS_MULTI_IMAGE = True
+    
+    MAX_IMAGE_SIZE = 8 * 1024 * 1024  # 8MB
+    MAX_VIDEO_SIZE = 256 * 1024 * 1024 * 1024 # 256GB
+    MAX_VIDEO_DURATION = 12 * 60 * 60  # 12 hours
 
     def __init__(self, integration_name: str = None):
         super().__init__(integration_name)
