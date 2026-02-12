@@ -41,9 +41,6 @@ Issues = "https://github.com/Dev-Abhi-49/frappe_social_scheduler/issues"
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.bench.frappe-dependencies]
-frappe = ">=15,<16"
-
 [tool.bench]
 frappe-dependencies = { frappe = ">=15.0.0,<16.0.0" }
 
