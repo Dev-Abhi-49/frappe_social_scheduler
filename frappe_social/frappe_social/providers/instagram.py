@@ -155,7 +155,7 @@ class InstagramProvider(BaseProvider):
             container_resp = requests.post(
                 f"{self.api_base}/{instagram_id}/media",
                 data=container_data,
-                timeout=120,
+                timeout=120, # 
             ).json()
 
             if "id" not in container_resp:
@@ -250,7 +250,7 @@ class InstagramProvider(BaseProvider):
             carousel_resp = requests.post(
                 f"{self.api_base}/{instagram_id}/media",
                 data=carousel_data,
-                timeout=240,
+                timeout=300,
             ).json()
 
             if "id" not in carousel_resp:
@@ -263,7 +263,7 @@ class InstagramProvider(BaseProvider):
             publish_resp = requests.post(
                 f"{self.api_base}/{instagram_id}/media_publish",
                 data={"creation_id": carousel_id, "access_token": page_token},
-                timeout=240,
+                timeout=300,
             ).json()
 
             if "id" not in publish_resp:
@@ -630,7 +630,7 @@ class InstagramProvider(BaseProvider):
                     "access_token": page_token,
                     "fields": "username,followers_count,follows_count,media_count",
                 },
-                timeout=30,
+                timeout=120,
             )
 
             if account_response.status_code != 200:
@@ -647,7 +647,7 @@ class InstagramProvider(BaseProvider):
                     "fields": "id,media_type,like_count,comments_count",
                     "limit": 25,
                 },
-                timeout=30,
+                timeout=120,
             )
 
             total_likes, total_comments, posts_count = 0, 0, 0
@@ -700,7 +700,7 @@ class InstagramProvider(BaseProvider):
                     "access_token": page_token,
                     "fields": "id,media_type,permalink,like_count,comments_count",
                 },
-                timeout=30,
+                timeout=120,
             )
 
             likes = comments = 0
@@ -718,7 +718,7 @@ class InstagramProvider(BaseProvider):
                 insights_resp = requests.get(
                     f"{self.api_base}/{post_id}/insights",
                     params={"access_token": page_token, "metric": "impressions,reach,saved,engagement"},
-                    timeout=30,
+                    timeout=120,
                 )
                 if insights_resp.status_code == 200:
                     for item in insights_resp.json().get("data", []):
