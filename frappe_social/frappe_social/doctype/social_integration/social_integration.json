@@ -253,6 +253,7 @@
    "label": "Profile Image"
   },
   {
+   "depends_on": "eval:doc.platform === \"Facebook\"",
    "fieldname": "page_name",
    "fieldtype": "Data",
    "label": "Page Name",
@@ -273,7 +274,7 @@
  ],
  "image_field": "profile_image",
  "links": [],
- "modified": "2026-02-10 10:02:39.362645",
+ "modified": "2026-02-13 10:34:55.920226",
  "modified_by": "Administrator",
  "module": "Frappe Social",
  "name": "Social Integration",

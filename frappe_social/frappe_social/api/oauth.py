@@ -90,7 +90,7 @@ def _get_auth_url(platform: str, settings, redirect_uri: str, state: str) -> str
         ]
         params = {
             "client_id": settings.instagram_app_id,   # or reuse meta_app_id if same app
-            "redirect_uri": "https://punchiest-carey-unegotistical.ngrok-free.dev/api/method/frappe_social.frappe_social.api.oauth.callback_instagramstandalone",
+            "redirect_uri": redirect_uri,
             "scope": " ".join(scopes),   # Business Login expects space-separated scopes
             "response_type": "code",
             "state": state,
@@ -550,7 +550,7 @@ def _handle_meta_callback(platform: str):
                     authorized_user_name=me_data.get("name"),
                     authorized_user_email=me_data.get("email"),
                     followers_count=ig.get("followers_count", 0),
-                    account_name=cache_data.get("account_name") or ig["instagram_username"],
+                    account_name=cache_data.get("account_name"),
                     account_description=cache_data.get("account_description"),
                     organization=cache_data.get("organization"),
                 )
