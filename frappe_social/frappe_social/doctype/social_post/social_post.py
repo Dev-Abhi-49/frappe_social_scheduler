@@ -278,8 +278,8 @@ class SocialPost(Document):
                 duration = get_video_duration(full_path)
                 media_item.duration = duration
                 
-                if duration > get_provider("Instagram").MAX_STORY_VIDEO_DURATION:
-                    frappe.throw(_("Instagram Story videos must be less than or equal to {0} seconds (got {1:.1f}s)").format(get_provider("Instagram").MAX_STORY_VIDEO_DURATION, duration))
+                if duration > get_provider("Instagram").STORY_MAX_DURATION:
+                    frappe.throw(_("Instagram Story videos must be less than or equal to {0} seconds (got {1:.1f}s)").format(get_provider("Instagram").STORY_MAX_DURATION, duration))
             else:
                 # Check file size (8MB limit for story images)
                 if media_item.file_size > get_provider("Instagram").STORY_MAX_IMAGE_SIZE:

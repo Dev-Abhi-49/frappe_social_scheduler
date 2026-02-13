@@ -155,7 +155,7 @@ class InstagramProvider(BaseProvider):
             container_resp = requests.post(
                 f"{self.api_base}/{instagram_id}/media",
                 data=container_data,
-                timeout=120, # 
+                timeout=300, 
             ).json()
 
             if "id" not in container_resp:
@@ -168,7 +168,7 @@ class InstagramProvider(BaseProvider):
             publish_resp = requests.post(
                 f"{self.api_base}/{instagram_id}/media_publish",
                 data={"creation_id": container_id, "access_token": page_token},
-                timeout=120,
+                timeout=300,
             ).json()
 
             if "id" not in publish_resp:
@@ -218,7 +218,7 @@ class InstagramProvider(BaseProvider):
                 item_resp = requests.post(
                     f"{self.api_base}/{instagram_id}/media",
                     data=item_data,
-                    timeout=240,
+                    timeout=300,
                 ).json()
 
                 if "id" not in item_resp:
@@ -371,7 +371,7 @@ class InstagramProvider(BaseProvider):
             container_resp = requests.post(
                 f"{self.api_base}/{instagram_id}/media",
                 data=container_data,
-                timeout=240,
+                timeout=300,
             ).json()
 
             if "id" not in container_resp:
@@ -394,7 +394,7 @@ class InstagramProvider(BaseProvider):
             publish_resp = requests.post(
                 f"{self.api_base}/{instagram_id}/media_publish",
                 data={"creation_id": container_id, "access_token": page_token},
-                timeout=240,
+                timeout=300,
             ).json()
 
             if "id" not in publish_resp:
