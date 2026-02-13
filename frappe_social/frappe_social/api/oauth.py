@@ -126,8 +126,7 @@ def _get_auth_url(platform: str, settings, redirect_uri: str, state: str) -> str
         params = {
             "client_id": settings.youtube_client_id,
             "redirect_uri": redirect_uri,
-            "scope": "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email",
-            # https://www.googleapis.com/auth/youtubepartner and https://www.googleapis.com/auth/youtube.force-ssl can be added later if needed for advanced features
+            "scope": "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/youtubepartner https://www.googleapis.com/auth/youtube.force-ssl",
             "state": state,
             "response_type": "code",
             "access_type": "offline",
@@ -816,3 +815,146 @@ def _oauth_success_redirect(integration_name: str):
     # Use safe parameter naming to avoid Frappe field validation issues
     frappe.local.response["type"] = "redirect"
     frappe.local.response["location"] = f"/app/social-integration"
+
+# youtube refresh token handler
+    
+@frappe.whitelist()
+def refresh_youtube_token(integration_name: str) -> dict:
+    """Refresh YouTube access token using refresh token"""
+    try:
+        integration = frappe.get_doc("Social Integration", integration_name)
+        
+        if integration.platform != "YouTube":
+            return {"success": False, "error": "Not a YouTube integration"}
+        
+        refresh_token = integration.get_password("refresh_token")
+        if not refresh_token:
+            integration.connection_status = "Error"
+            integration.last_error = "No refresh token available"
+            integration.save(ignore_permissions=True)
+            return {"success": False, "error": "No refresh token available. Please reconnect the account."}
+        
+        settings = frappe.get_single("Social Settings")
+        
+        response = requests.post(
+            "https://oauth2.googleapis.com/token",
+            data={
+                "client_id": settings.youtube_client_id,
+                "client_secret": settings.get_password("youtube_client_secret"),
+                "refresh_token": refresh_token,
+                "grant_type": "refresh_token",
+            },
+            timeout=10,
+        )
+        
+        if response.status_code == 200:
+            token_data = response.json()
+            new_access_token = token_data.get("access_token")
+            expires_in = token_data.get("expires_in", 3600)
+            
+            # Update integration with new token
+            integration.access_token = new_access_token
+            integration.token_expiry = add_to_date(now_datetime(), seconds=expires_in)
+            integration.connection_status = "Connected"
+            integration.last_error = None
+            integration.save(ignore_permissions=True)
+            frappe.db.commit()
+            
+            frappe.logger().info(f"YouTube token refreshed for {integration_name}")
+            return {
+                "success": True, 
+                "access_token": new_access_token,
+                "expires_in": expires_in
+            }
+        else:
+            error_data = response.json() if response.text else {}
+            error_msg = error_data.get("error_description", error_data.get("error", response.text))
+            
+            integration.connection_status = "Error"
+            integration.last_error = f"Token refresh failed: {error_msg}"
+            integration.save(ignore_permissions=True)
+            frappe.db.commit()
+            
+            frappe.logger().error(f"YouTube token refresh failed for {integration_name}: {error_msg}")
+            return {"success": False, "error": error_msg}
+            
+    except Exception as e:
+        frappe.log_error(f"YouTube token refresh error: {str(e)}\n{frappe.get_traceback()}", "OAuth Token Refresh")
+        return {"success": False, "error": str(e)}
+
+
+def auto_refresh_if_expired(integration_doc) -> bool:
+    """
+    Automatically refresh token if expired (for YouTube)
+    Call this before making API requests
+    Returns True if token is valid, False if refresh failed
+    """
+    if integration_doc.platform != "YouTube":
+        return True
+    
+    # Check if token is expired or about to expire (within 5 minutes)
+    if integration_doc.token_expiry:
+        time_until_expiry = frappe.utils.time_diff_in_seconds(
+            integration_doc.token_expiry, 
+            now_datetime()
+        )
+        
+        # Token still valid for more than 5 minutes
+        if time_until_expiry > 300:
+            return True
+    
+    # Token expired or about to expire, refresh it
+    frappe.logger().info(f"Auto-refreshing YouTube token for {integration_doc.name}")
+    result = refresh_youtube_token(integration_doc.name)
+    
+    if result.get("success"):
+        # Reload the document to get fresh token
+        integration_doc.reload()
+        return True
+    else:
+        frappe.logger().error(f"Failed to refresh YouTube token: {result.get('error')}")
+        return False
+
+
+def refresh_all_youtube_tokens():
+    """Scheduled job to refresh all YouTube tokens (called from tasks.py)"""
+    youtube_integrations = frappe.get_all(
+        "Social Integration",
+        filters={
+            "platform": "YouTube",
+            "enabled": 1,
+            "connection_status": ["in", ["Connected", "Expired"]]
+        },
+        pluck="name"
+    )
+    
+    success_count = 0
+    error_count = 0
+    
+    for integration_name in youtube_integrations:
+        try:
+            result = refresh_youtube_token(integration_name)
+            if result.get("success"):
+                success_count += 1
+                frappe.logger().info(f"✓ Refreshed token for {integration_name}")
+            else:
+                error_count += 1
+                frappe.logger().error(f"✗ Failed to refresh token for {integration_name}: {result.get('error')}")
+        except Exception as e:
+            error_count += 1
+            frappe.log_error(f"Token refresh error for {integration_name}: {str(e)}", "Scheduled Token Refresh")
+    
+    frappe.logger().info(f"YouTube token refresh completed: {success_count} success, {error_count} failed")
+
+
+@frappe.whitelist()
+def manual_refresh_youtube_token(integration_name: str):
+    """Manually refresh YouTube token (for testing/troubleshooting)"""
+    result = refresh_youtube_token(integration_name)
+    
+    if result.get("success"):
+        frappe.msgprint(_("YouTube token refreshed successfully"), indicator="green")
+    else:
+        frappe.throw(_("Failed to refresh token: {0}").format(result.get("error")))
+    
+    return result

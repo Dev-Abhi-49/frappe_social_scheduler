@@ -11,17 +11,20 @@ scheduler_events = {
     "hourly": [
         "frappe_social.frappe_social.tasks.refresh_expiring_tokens",
         "frappe_social.frappe_social.tasks.fetch_post_analytics"
+        "frappe_social.frappe_social.tasks.refresh_youtube_tokens"
     ],
 }
 """
 
 import frappe
 from frappe.utils import now_datetime, add_days
-
+from frappe_social.frappe_social.services.post_service import PostService
+from frappe_social.frappe_social.services.token_service import TokenService
+from frappe_social.frappe_social.api.oauth import refresh_all_youtube_tokens
+from frappe_social.frappe_social.services.analytics_service import AnalyticsService
 
 def publish_scheduled_posts():
     """Publish posts that are scheduled and due (runs every minute)"""
-    from frappe_social.frappe_social.services.post_service import PostService
 
     posts = frappe.get_all(
         "Social Post", filters={"status": "Scheduled", "scheduled_time": ["<=", now_datetime()]}, pluck="name"
@@ -43,14 +46,13 @@ def publish_scheduled_posts():
 
 def refresh_expiring_tokens():
     """Refresh tokens expiring within 5 days (runs hourly)"""
-    from frappe_social.frappe_social.services.token_service import TokenService
 
     threshold = add_days(now_datetime(), 5)
 
     # Fixed: Use list-style filters to avoid duplicate key issue
     integrations = frappe.get_all(
         "Social Integration",
-        filters=[["enabled", "=", 1], ["token_expiry", "<=", threshold], ["token_expiry", "is", "set"]],
+        filters=[["enabled", "=", 1], ["token_expiry", "<=", threshold], ["token_expiry", "is", "set"], ["platform", "!=", "YouTube"]],
         pluck="name",
     )
 
@@ -67,13 +69,25 @@ def refresh_expiring_tokens():
         except Exception as e:
             frappe.log_error(f"Token refresh failed {name}: {e}", "Token Refresh")
 
+def refresh_youtube_tokens():
+    """
+    Refresh all YouTube tokens (runs daily)
+    YouTube access tokens expire every 1 hour, so we refresh them proactively
+    """
+    
+    try:
+        refresh_all_youtube_tokens()
+    except Exception as e:
+        frappe.log_error(f"YouTube token refresh task failed: {str(e)}", "YouTube Token Refresh")
+
+
 
 def fetch_daily_analytics():
     """Fetch account analytics for all integrations (runs hourly)"""
-    from frappe_social.frappe_social.services.analytics_service import AnalyticsService
 
     integrations = frappe.get_all(
-        "Social Integration", filters={"enabled": 1, "connection_status": "Connected"}, pluck="name"
+        "Social Integration", filters={"enabled": 1, "connection_status": "Connected"}, 
+        pluck="name"
     )
 
     for name in integrations:

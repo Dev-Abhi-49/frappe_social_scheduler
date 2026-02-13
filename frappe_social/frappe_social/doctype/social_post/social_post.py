@@ -45,6 +45,12 @@ class SocialPost(Document):
                     _("Please select any one Facebook content type: Post, Reel, or Story"),
                     title=_("Content Type"),
                 )
+        elif self.platform == "YouTube":
+            if not (self.is_yt_post or self.is_short or self.is_video):
+                frappe.throw(
+                    _("Please select any one YouTube content type: Post, Short, or Video"),
+                    title=_("Content Type"),
+                )
 
     def validate(self):
         """Validate the post before saving/submitting"""
@@ -217,14 +223,16 @@ class SocialPost(Document):
                 # if media_item.duration > get_provider("Instagram").MAX_VIDEO_DURATION:
                 #     duration = media_item.duration
                 #     frappe.throw(_("Instagram Post videos must be under {0} seconds (got {1:.1f}s)").format(get_provider("Instagram").MAX_VIDEO_DURATION, duration))
-            else:
+            elif "image" in file_type:
                 if len(self.media) > get_provider("Instagram").MAX_IMAGES:
                     frappe.throw(_("Instagram Posts support a maximum of {0} images").format(get_provider("Instagram").MAX_IMAGES))
                 if media_item.file_size > get_provider("Instagram").MAX_IMAGE_SIZE:
                     size_mb = media_item.file_size / (1024 * 1024)
                     max_mb = get_provider("Instagram").MAX_IMAGE_SIZE / (1024 * 1024)
                     frappe.throw(_("Instagram Post images must be under {0:.2f} MB (got {1:.2f} MB)").format(max_mb, size_mb))
-                    
+            else:
+                frappe.throw(_("Instagram Posts only support image files"))
+                
          # Reel-specific validations
         if self.is_ig_reel:
             if not self.media or len(self.media) != 1:
@@ -281,23 +289,218 @@ class SocialPost(Document):
 
     def validate_youtube_content(self):
         """YouTube-specific validations"""
-        if not self.media or len(self.media) != 1:
-            frappe.throw(_("YouTube posts require exactly one video file"))
-
-        # Check if media is a video
-        media_item = self.media[0]
-        file_type = (media_item.file_type or "").lower()
         
-        if media_item.file_size > get_provider("YouTube").MAX_VIDEO_SIZE:
-            size_mb = media_item.file_size / (1024 * 1024)
-            max_mb = get_provider("YouTube").MAX_VIDEO_SIZE / (1024 * 1024)
-            frappe.throw(_("YouTube videos must be under {0:.2f} MB (got {1:.2f} MB)").format(max_mb, size_mb))
+        if self.is_yt_post:
+            # Community posts can have text only or text with images
+            if not self.media or len(self.media) == 0:
+                # Text-only post is allowed
+                if not self.content:
+                    frappe.throw(_("YouTube Community Posts require either content or media"))
+                return
             
-        if "video" not in file_type:
-            frappe.throw(_("YouTube requires video files"))
-
-        if not self.video_title:
-            frappe.throw(_("YouTube videos require a title"))
+            # Validate media count (1-10 images allowed)
+            if len(self.media) > 10:
+                frappe.throw(_("YouTube Community Posts support a maximum of 10 images (got {0})").format(len(self.media)))
+            
+            # Validate each media item is an image
+            for idx, media_item in enumerate(self.media, 1):
+                file_type = (media_item.file_type or "").lower()
+                
+                if "video" in file_type:
+                    frappe.throw(_("YouTube Community Posts do not support videos. Please use images only."))
+                
+                if "image" not in file_type:
+                    frappe.throw(_("YouTube Community Posts only support images (got {0} for file {1})").format(file_type, idx))
+                
+                # Validate file type
+                allowed_image_types = get_provider("YouTube").ALLOWED_IMAGE_TYPES
+                if file_type not in allowed_image_types:
+                    frappe.throw(_("Image type '{0}' not allowed. Allowed types: {1}").format(
+                        file_type, ", ".join(allowed_image_types)
+                    ))
+                
+                # Validate file size (8MB limit for community post images)
+                if media_item.file_size > get_provider("YouTube").MAX_IMAGE_SIZE:
+                    size_mb = media_item.file_size / (1024 * 1024)
+                    max_mb = get_provider("YouTube").MAX_IMAGE_SIZE / (1024 * 1024)
+                    frappe.throw(_("YouTube Community Post images must be under {0:.2f} MB (image {1} is {2:.2f} MB)").format(
+                        max_mb, idx, size_mb
+                    ))
+            
+            # Content is optional for posts with images
+            return
+        
+        if self.is_short:
+            # Shorts require exactly one video file
+            if not self.media or len(self.media) != 1:
+                frappe.throw(_("YouTube Shorts require exactly one video file"))
+            
+            media_item = self.media[0]
+            file_type = (media_item.file_type or "").lower()
+            
+            # Must be a video
+            if "video" not in file_type:
+                frappe.throw(_("YouTube Shorts require a video file (.mp4 or .mov)"))
+            
+            # Validate file type
+            allowed_video_types = get_provider("YouTube").ALLOWED_VIDEO_TYPES
+            if file_type not in allowed_video_types:
+                frappe.throw(_("Video type '{0}' not allowed. Allowed types: {1}").format(
+                    file_type, ", ".join(allowed_video_types)
+                ))
+            
+            # Get file path for detailed validation
+            full_path = get_full_path(media_item.file)
+            
+            # Validate file size (256GB max, but typically much smaller for Shorts)
+            if media_item.file_size > get_provider("YouTube").MAX_VIDEO_SIZE:
+                size_mb = media_item.file_size / (1024 * 1024)
+                max_mb = get_provider("YouTube").MAX_VIDEO_SIZE / (1024 * 1024)
+                frappe.throw(_("YouTube Shorts must be under {0:.2f} MB (got {1:.2f} MB)").format(
+                    max_mb, size_mb
+                ))
+            
+            # Validate duration (must be 60 seconds or less)
+            duration = get_video_duration(full_path)
+            media_item.duration = duration
+            
+            if duration > 60:
+                frappe.throw(_("YouTube Shorts must be 60 seconds or less (got {0:.1f} seconds)").format(duration))
+            
+            if duration < 1:
+                frappe.throw(_("YouTube Shorts must be at least 1 second long"))
+            
+            # Validate aspect ratio (must be vertical 9:16 or square 1:1)
+            width, height = get_video_dimensions(full_path)
+            
+            if height < width:
+                frappe.throw(_("YouTube Shorts must be vertical (9:16) or square (1:1). Got {0}x{1} (horizontal)").format(
+                    width, height
+                ))
+            
+            # Check minimum resolution (720p height minimum)
+            if height < 720:
+                frappe.throw(_("YouTube Shorts require minimum 720p vertical resolution. Got {0}x{1}").format(
+                    width, height
+                ))
+            
+            # Calculate and validate aspect ratio
+            aspect_ratio = height / width if width > 0 else 0
+            
+            # Allow 9:16 (1.778) or 1:1 (1.0) with some tolerance
+            is_vertical = aspect_ratio >= 1.5  # 9:16 is ~1.778
+            is_square = 0.95 <= aspect_ratio <= 1.05  # 1:1 with 5% tolerance
+            
+            if not (is_vertical or is_square):
+                frappe.throw(_("YouTube Shorts must be vertical (9:16 aspect ratio) or square (1:1). Got {0:.2f}:1").format(
+                    aspect_ratio
+                ))
+            
+            # Title is required
+            if not self.video_title:
+                frappe.throw(_("YouTube Shorts require a title"))
+            
+            # Validate title length (100 characters max)
+            if len(self.video_title) > 100:
+                frappe.throw(_("YouTube video title must be 100 characters or less (got {0})").format(
+                    len(self.video_title)
+                ))
+            
+            # Description is optional but validate if provided
+            if self.content and len(self.content) > 5000:
+                frappe.throw(_("YouTube description must be 5000 characters or less (got {0})").format(
+                    len(self.content)
+                ))
+            
+            # Note: #Shorts tag will be automatically added by the provider
+            return
+        
+        if self.is_video:
+            # Regular videos require exactly one video file
+            if not self.media or len(self.media) != 1:
+                frappe.throw(_("YouTube Videos require exactly one video file"))
+            
+            media_item = self.media[0]
+            file_type = (media_item.file_type or "").lower()
+            
+            # Must be a video
+            if "video" not in file_type:
+                frappe.throw(_("YouTube Videos require a video file (.mp4 or .mov)"))
+            
+            # Validate file type
+            allowed_video_types = get_provider("YouTube").ALLOWED_VIDEO_TYPES
+            if file_type not in allowed_video_types:
+                frappe.throw(_("Video type '{0}' not allowed. Allowed types: {1}").format(
+                    file_type, ", ".join(allowed_video_types)
+                ))
+            
+            # Get file path for detailed validation
+            full_path = get_full_path(media_item.file)
+            
+            # Validate file size (256GB max for YouTube)
+            if media_item.file_size > get_provider("YouTube").MAX_VIDEO_SIZE:
+                size_gb = media_item.file_size / (1024 * 1024 * 1024)
+                max_gb = get_provider("YouTube").MAX_VIDEO_SIZE / (1024 * 1024 * 1024)
+                frappe.throw(_("YouTube Videos must be under {0:.2f} GB (got {1:.2f} GB)").format(
+                    max_gb, size_gb
+                ))
+            
+            # Validate duration (max 12 hours for non-verified, 15 minutes for unverified)
+            duration = get_video_duration(full_path)
+            media_item.duration = duration
+            
+            max_duration = get_provider("YouTube").MAX_VIDEO_DURATION  # 12 hours in seconds
+            if duration > max_duration:
+                max_hours = max_duration / 3600
+                got_hours = duration / 3600
+                frappe.throw(_("YouTube Videos must be under {0:.1f} hours (got {1:.2f} hours)").format(
+                    max_hours, got_hours
+                ))
+            
+            if duration < 1:
+                frappe.throw(_("YouTube Videos must be at least 1 second long"))
+            
+            # Get video dimensions for validation
+            width, height = get_video_dimensions(full_path)
+            
+            # Check minimum resolution (426x240 minimum)
+            if width < 426 or height < 240:
+                frappe.throw(_("YouTube Videos require minimum 426x240 resolution. Got {0}x{1}").format(
+                    width, height
+                ))
+            
+            # Title is required
+            if not self.video_title:
+                frappe.throw(_("YouTube Videos require a title"))
+            
+            # Validate title length (100 characters max)
+            if len(self.video_title) > 100:
+                frappe.throw(_("YouTube video title must be 100 characters or less (got {0})").format(
+                    len(self.video_title)
+                ))
+            
+            # Description is optional but validate if provided
+            if self.content and len(self.content) > 5000:
+                frappe.throw(_("YouTube description must be 5000 characters or less (got {0})").format(
+                    len(self.content)
+                ))
+            
+            # Validate thumbnail if provided (optional but recommended)
+            if self.thumbnail:
+                # Thumbnail validation will be handled by the provider
+                # Just check if file exists
+                thumbnail_path = frappe.get_site_path("public", self.thumbnail.lstrip("/"))
+                if not os.path.exists(thumbnail_path):
+                    frappe.throw(_("Thumbnail file not found: {0}").format(self.thumbnail))
+                
+                # Check thumbnail size (2MB max for YouTube)
+                thumbnail_size = os.path.getsize(thumbnail_path)
+                max_thumbnail_size = 2 * 1024 * 1024  # 2MB
+                if thumbnail_size > max_thumbnail_size:
+                    size_mb = thumbnail_size / (1024 * 1024)
+                    frappe.throw(_("YouTube thumbnail must be under 2 MB (got {0:.2f} MB)").format(size_mb))
+            
+            return    
 
     def validate_content_length(self):
         """Validate content length against platform limits"""

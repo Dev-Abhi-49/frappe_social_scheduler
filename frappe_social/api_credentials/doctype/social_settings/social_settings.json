@@ -202,7 +202,7 @@
    "fieldtype": "Column Break"
   },
   {
-   "default": "v21.0",
+   "default": "v24.0",
    "fieldname": "meta_api_version",
    "fieldtype": "Data",
    "label": "Graph API Version"
@@ -312,7 +312,7 @@
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-02-10 09:35:38.815900",
+ "modified": "2026-02-12 17:10:54.570361",
  "modified_by": "Administrator",
  "module": "API Credentials",
  "name": "Social Settings",

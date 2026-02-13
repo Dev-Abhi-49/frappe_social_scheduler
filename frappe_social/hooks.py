@@ -25,6 +25,7 @@ scheduler_events = {
     "hourly": [
         "frappe_social.frappe_social.tasks.refresh_expiring_tokens",
         "frappe_social.frappe_social.tasks.fetch_post_analytics",
+        "frappe_social.frappe_social.tasks.refresh_youtube_tokens",
     ],
 }
 
