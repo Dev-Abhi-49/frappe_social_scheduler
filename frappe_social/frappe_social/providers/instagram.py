@@ -163,6 +163,21 @@ class InstagramProvider(BaseProvider):
                 return self._handle_error(container_resp, "Container creation failed")
 
             container_id = container_resp["id"]
+            
+            frappe.logger().info(f"Waiting for image container {container_id} to be ready...")
+            processing_result = self._wait_for_media_processing(
+                container_id, 
+                page_token, 
+                max_retries=20,  # Images process faster than videos
+                delay=3          # Check every 3 seconds
+            )
+            
+            if not processing_result["success"]:
+                cleanup_temp_files(self._temp_public_files)
+                return PublishResult(
+                    success=False,
+                    error_message=f"Image processing failed: {processing_result['message']}"
+                )
 
             # Publish container
             publish_resp = requests.post(
