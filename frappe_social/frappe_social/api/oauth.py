@@ -396,7 +396,7 @@ def _handle_instagram_standalone_callback():
     frappe.set_user(cache_data.get("user"))
 
     integration = _save_integration(
-        platform="Instagram",        # you can keep platform as 'Instagram' here, or 'InstagramStandalone' if you want to distinguish
+        platform="InstagramStandalone",        # you can keep platform as 'Instagram' here, or 'InstagramStandalone' if you want to distinguish
         profile_id=profile.get("id"),
         profile_name=profile.get("username"),
         access_token=user_token,
@@ -480,7 +480,7 @@ def _handle_meta_callback(platform: str):
             f"https://graph.facebook.com/{api_version}/me/accounts",
             params={
                 "access_token": user_token, 
-                "fields": "id,name,tasks,access_token,picture{url},fan_count,instagram_business_account{id,username,profile_picture_url,followers_count}",
+                "fields": "id,name,tasks,access_token,picture{url},fan_count",
             },
         )
         .json()
@@ -506,19 +506,27 @@ def _handle_meta_callback(platform: str):
     if platform == "Instagram":
         selected_ig_accounts = []
         for page in pages:
-            ig = page.get("instagram_business_account")
+            ig = requests.get(
+                f"https://graph.facebook.com/{api_version}/{page['id']}",
+                params={
+                    "access_token": page["access_token"],
+                    "fields": "instagram_business_account{id,username,followers_count,profile_picture_url}",
+                },
+            ).json().get("instagram_business_account")
+            
             if not ig:
+                frappe.logger().warning(f"Page {page['name']} is not connected to an Instagram Business account or permissions not granted.")
                 continue
-    
-            selected_ig_accounts.append({
-                "page_id": page["id"],
-                "page_name": page["name"],
-                "page_access_token": page["access_token"],
-                "instagram_id": ig["id"],
-                "instagram_username": ig.get("username"),
-                "followers_count": ig.get("followers_count", 0),
-                "profile_picture_url": ig.get("profile_picture_url"),
-            })
+            if ig:
+                selected_ig_accounts.append({
+                    "page_id": page["id"],
+                    "page_name": page["name"],
+                    "page_access_token": page["access_token"],
+                    "instagram_id": ig["id"],
+                    "instagram_username": ig.get("username"),
+                    "followers_count": ig.get("followers_count", 0),
+                    "profile_picture_url": ig.get("profile_picture_url"),
+                })
     
         if not selected_ig_accounts:
             return _oauth_error_redirect(
