@@ -45,6 +45,11 @@ def get_full_path(file_path: str) -> str:
         raise ValueError("Empty file path")
    
     file_path = file_path.strip()
+    
+    if "://" in file_path:
+        from urllib.parse import urlparse
+        parsed = urlparse(file_path)
+        file_path = parsed.path
    
     # Handle Frappe's file path conventions
     mappings = (

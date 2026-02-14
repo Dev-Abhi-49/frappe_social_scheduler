@@ -14,6 +14,7 @@ import os
 from datetime import datetime, timezone
 from frappe_social.frappe_social.providers.base import BaseProvider, PublishResult, AnalyticsResult
 from frappe_social.frappe_social.api.oauth import auto_refresh_if_expired
+from frappe_social.frappe_social.utils.media import get_full_path
 
 class YouTubeProvider(BaseProvider):
     PLATFORM = "YouTube"
@@ -44,6 +45,13 @@ class YouTubeProvider(BaseProvider):
 
     def __init__(self, integration_name: str = None):
         super().__init__(integration_name)
+        
+    def _get_valid_access_token(self):
+        """Ensure we have a fresh access token (YouTube tokens expire after ~1 hour)"""
+        if not auto_refresh_if_expired(self.integration):
+            raise Exception("Failed to refresh YouTube access token. "
+                            "Please reconnect the account or check Social Settings.")
+        return self.integration.get_password("access_token")
 
     def publish_post(self, content: str = None, media_files: list = None, video_title: str = None,
                      tags: str = None, is_short: bool = False, is_video: bool = False, 
@@ -150,7 +158,7 @@ class YouTubeProvider(BaseProvider):
         """Upload an image for community post and return media ID"""
         try:
             file_path = media_file.file_url if hasattr(media_file, 'file_url') else media_file
-            full_path = frappe.get_site_path("public", file_path.lstrip("/"))
+            full_path = get_full_path(file_path)
             
             # Upload image
             with open(full_path, "rb") as image_file:
@@ -192,7 +200,7 @@ class YouTubeProvider(BaseProvider):
         try:
             file_doc = media_files[0]
             file_path = file_doc.file_url if hasattr(file_doc, 'file_url') else file_doc
-            full_path = frappe.get_site_path("public", file_path.lstrip("/"))
+            full_path = get_full_path(file_path)
             
             # Parse tags
             video_tags = self._parse_tags(tags)
@@ -355,7 +363,7 @@ class YouTubeProvider(BaseProvider):
     def _upload_thumbnail(self, video_id: str, thumbnail_path: str, access_token: str) -> bool:
         """Upload custom thumbnail for video"""
         try:
-            full_thumbnail_path = frappe.get_site_path("public", thumbnail_path.lstrip("/"))
+            full_thumbnail_path = get_full_path(file_path)
             
             if not os.path.exists(full_thumbnail_path):
                 frappe.log_error(f"Thumbnail not found: {full_thumbnail_path}", "YouTube Provider")

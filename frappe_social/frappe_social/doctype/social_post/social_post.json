@@ -28,12 +28,12 @@
   "column_break_zemz",
   "is_ig_story",
   "section_break_kdcc",
-  "column_break_rtkn",
-  "is_yt_post",
   "column_break_thfr",
   "is_short",
   "column_break_vsfa",
   "is_video",
+  "column_break_rtkn",
+  "is_yt_post",
   "content_section",
   "content",
   "character_limit",
@@ -70,7 +70,7 @@
    "placeholder": "What's in your mind......"
   },
   {
-   "depends_on": "eval:doc.platform === \"YouTube\"",
+   "depends_on": "eval:doc.platform === \"YouTube\" && doc.is_yt_post == 0",
    "fieldname": "video_title",
    "fieldtype": "Data",
    "label": "Video Title"
@@ -356,6 +356,7 @@
    "default": "0",
    "fieldname": "is_yt_post",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Is Post"
   },
   {
@@ -365,7 +366,7 @@
  ],
  "hide_toolbar": 1,
  "links": [],
- "modified": "2026-02-12 18:10:21.896620",
+ "modified": "2026-02-13 17:04:48.920522",
  "modified_by": "Administrator",
  "module": "Frappe Social",
  "name": "Social Post",

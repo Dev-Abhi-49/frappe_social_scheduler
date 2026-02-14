@@ -312,7 +312,7 @@
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-02-12 17:10:54.570361",
+ "modified": "2026-02-14 10:25:23.671182",
  "modified_by": "Administrator",
  "module": "API Credentials",
  "name": "Social Settings",
@@ -332,6 +332,16 @@
    "print": 1,
    "read": 1,
    "role": "Administrator",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Scheduler Admin",
    "share": 1,
    "write": 1
   }

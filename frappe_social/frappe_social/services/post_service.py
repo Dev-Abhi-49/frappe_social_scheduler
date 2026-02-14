@@ -54,6 +54,7 @@ class PostService:
         try:
             # Validate required fields
             if not post.platform or not post.account:
+                frappe.throw(__("Platform or Account or Platform missing"))
                 raise Exception("Platform or Account missing")
 
             # Publish to platform
@@ -125,6 +126,8 @@ class PostService:
                 return PostService._publish_instagram_content(provider, post, plain_content, media_files)
             elif platform == "Facebook":
                 return PostService._publish_facebook_content(provider, post, plain_content, media_files)
+            elif platform == "YouTube":
+                return PostService._publish_youtube_content(provider, post, plain_content, media_files)
             else:
                 # Generic publishing for other platforms
                 return provider.publish_post(
@@ -272,6 +275,177 @@ class PostService:
             link=link,
             cta=cta,
         )
+        
+    @staticmethod
+    def _publish_youtube_content(provider, post, plain_content: str, media_files: list) -> PublishResult:
+        """
+        Handle YouTube-specific content types (Community Posts, Shorts, Videos)
+        """
+        try:
+            frappe.logger().info("=== Publishing YouTube Content ===")
+            
+            # Get YouTube-specific flags from post
+            is_yt_post = getattr(post, "is_yt_post", False)  # Community post
+            is_short = getattr(post, "is_short", False)       # YouTube Short
+            is_video = getattr(post, "is_video", False)       # Regular video
+
+            frappe.logger().info(f"Content type flags - Post: {is_yt_post}, Short: {is_short}, Video: {is_video}")
+
+            # Validation: Only one content type should be selected
+            selected_types = sum([is_yt_post, is_short, is_video])
+
+            if selected_types == 0:
+                return PublishResult(
+                    success=False,
+                    error_message="Please select a YouTube content type (Post, Short, or Video)"
+                )
+            elif selected_types > 1:
+                return PublishResult(
+                    success=False,
+                    error_message="Please select only one YouTube content type (Post, Short, or Video)"
+                )
+
+            # Content type specific validations
+            if is_yt_post:
+                # Community posts can have text only or text + images (1-10)
+                frappe.logger().info("Validating YouTube Community Post")
+                
+                if media_files and len(media_files) > 0:
+                    if len(media_files) > 10:
+                        return PublishResult(
+                            success=False,
+                            error_message="YouTube Community Posts support a maximum of 10 images"
+                        )
+                    
+                    # Validate all files are images
+                    for idx, media_file in enumerate(media_files, 1):
+                        file_url = getattr(media_file, "file_url", media_file)
+                        if not file_url.lower().endswith((".jpg", ".jpeg", ".png", ".gif")):
+                            return PublishResult(
+                                success=False,
+                                error_message=f"YouTube Community Posts only support images. File {idx} is not an image."
+                            )
+                elif not plain_content:
+                    return PublishResult(
+                        success=False,
+                        error_message="YouTube Community Posts require either content or media"
+                    )
+
+            elif is_short:
+                # Shorts require exactly one video
+                frappe.logger().info("Validating YouTube Short")
+                
+                if not media_files or len(media_files) == 0:
+                    return PublishResult(
+                        success=False,
+                        error_message="YouTube Shorts require exactly one video file"
+                    )
+                if len(media_files) > 1:
+                    return PublishResult(
+                        success=False,
+                        error_message="YouTube Shorts support only one video at a time"
+                    )
+
+                # Check if it's a video
+                file_url = getattr(media_files[0], "file_url", media_files[0])
+                if not file_url.lower().endswith((".mp4", ".mov")):
+                    return PublishResult(
+                        success=False,
+                        error_message="YouTube Shorts require video files (.mp4 or .mov)"
+                    )
+                
+                # Video title is required for Shorts
+                video_title = getattr(post, "video_title", None)
+                if not video_title:
+                    return PublishResult(
+                        success=False,
+                        error_message="YouTube Shorts require a video title"
+                    )
+
+            elif is_video:
+                # Regular videos require exactly one video
+                frappe.logger().info("Validating YouTube Video")
+                
+                if not media_files or len(media_files) == 0:
+                    return PublishResult(
+                        success=False,
+                        error_message="YouTube Videos require exactly one video file"
+                    )
+                if len(media_files) > 1:
+                    return PublishResult(
+                        success=False,
+                        error_message="YouTube Videos support only one video at a time"
+                    )
+
+                # Check if it's a video
+                file_url = getattr(media_files[0], "file_url", media_files[0])
+                if not file_url.lower().endswith((".mp4", ".mov")):
+                    return PublishResult(
+                        success=False,
+                        error_message="YouTube Videos require video files (.mp4 or .mov)"
+                    )
+                
+                # Video title is required
+                video_title = getattr(post, "video_title", None)
+                if not video_title:
+                    return PublishResult(
+                        success=False,
+                        error_message="YouTube Videos require a video title"
+                    )
+
+            # Get additional YouTube-specific parameters
+            video_title = getattr(post, "video_title", None)
+            tags = getattr(post, "small_text_aqno", None)  # Tags field
+            thumbnail = getattr(post, "thumbnail", None)
+            scheduled_time = getattr(post, "scheduled_time", None)
+            
+            # Default privacy to public, but can be overridden
+            privacy_status = "public"
+            
+            # If scheduled time is set, must be private initially
+            if scheduled_time:
+                privacy_status = "private"
+            
+            # Video category defaults to "22" (People & Blogs)
+            video_category = "22"
+
+            frappe.logger().info(f"""
+                YouTube Publish Parameters:
+                - Content Type: {'Post' if is_yt_post else 'Short' if is_short else 'Video'}
+                - Video Title: {video_title}
+                - Has Tags: {bool(tags)}
+                - Has Thumbnail: {bool(thumbnail)}
+                - Privacy: {privacy_status}
+                - Scheduled: {bool(scheduled_time)}
+                - Media Count: {len(media_files) if media_files else 0}
+                """)
+
+            # Publish with appropriate YouTube content type
+            return provider.publish_post(
+                content=plain_content,
+                media_files=media_files,
+                video_title=video_title,
+                tags=tags,
+                is_yt_post=is_yt_post,
+                is_short=is_short,
+                is_video=is_video,
+                thumbnail=thumbnail,
+                privacy_status=privacy_status,
+                scheduled_time=scheduled_time,
+                video_category=video_category,
+            )
+
+        except Exception as e:
+            error_msg = f"YouTube content preparation error: {str(e)}"
+            frappe.log_error(
+                title="YouTube Content Preparation Error - Post Service",
+                message=f"{error_msg}\n\nPost: {post.name}\nFull Traceback:\n{frappe.get_traceback()}"
+            )
+            return PublishResult(
+                success=False,
+                error_message=error_msg
+            )
+        
 
     @staticmethod
     def cancel_scheduled_post(post_name: str) -> Dict[str, Any]:
