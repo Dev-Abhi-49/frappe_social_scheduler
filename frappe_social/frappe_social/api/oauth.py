@@ -22,10 +22,9 @@ from frappe.utils import get_url, now_datetime, add_to_date
 settings = frappe.get_single("Social Settings")
 api_version = settings.meta_api_version or "v24.0"
 
-
 @frappe.whitelist()
 def initiate_oauth(
-    platform: str, account_name: str = None, account_description: str = None, organization: str = None
+    platform: str, account_name: str = None, account_description: str = None, organization: str = None, integration: str = None,
 ) -> dict:
     """Start OAuth flow for a platform"""
     state = secrets.token_urlsafe(32)
@@ -35,6 +34,7 @@ def initiate_oauth(
         "account_description": account_description,
         "organization": organization,
         "user": frappe.session.user,
+        "reconnect_integration": integration,
     }
     redirect_uri = get_callback_url(platform)
     auth_url = _get_auth_url(platform, settings, redirect_uri, state)
@@ -196,9 +196,11 @@ def callback_twitter():
         organization=cache_data.get("organization"),
     )
 
+    reconnect_integration = cache_data.get("reconnect_integration")
     frappe.cache().delete_value(f"oauth_state_{state}")
     frappe.cache().delete_value(f"twitter_verifier_{state}")
-    return _oauth_success_redirect(integration.name)
+    target_name = reconnect_integration or integration.name
+    return _oauth_success_redirect(target_name, reconnect_integration)
 
 
 @frappe.whitelist(allow_guest=True)
@@ -252,8 +254,10 @@ def callback_linkedin():
         organization=cache_data.get("organization"),
     )
 
+    reconnect_integration = cache_data.get("reconnect_integration")
     frappe.cache().delete_value(f"oauth_state_{state}")
-    return _oauth_success_redirect(integration.name)
+    target_name = reconnect_integration or integration.name
+    return _oauth_success_redirect(target_name, reconnect_integration)
 
 @frappe.whitelist(allow_guest=True)
 def callback_youtube():
@@ -321,8 +325,10 @@ def callback_youtube():
         authorized_user_email=user_info.get("email"),
     )
 
+    reconnect_integration = cache_data.get("reconnect_integration")
     frappe.cache().delete_value(f"oauth_state_{state}")
-    return _oauth_success_redirect(integration.name)
+    target_name = reconnect_integration or integration.name
+    return _oauth_success_redirect(target_name, reconnect_integration)
 
 @frappe.whitelist(allow_guest=True)
 def callback_instagramstandalone():
@@ -408,8 +414,10 @@ def _handle_instagram_standalone_callback():
         organization=cache_data.get("organization"),
     )
 
+    reconnect_integration = cache_data.get("reconnect_integration")
     frappe.cache().delete_value(f"oauth_state_{state}")
-    return _oauth_success_redirect(integration.name)
+    target_name = reconnect_integration or integration.name
+    return _oauth_success_redirect(target_name, reconnect_integration)
 
 # =============================================================================
 # Meta (Facebook/Instagram) Handler
@@ -587,9 +595,11 @@ def _handle_meta_callback(platform: str):
                 frappe.logger().error(error_msg)
                 frappe.log_error(frappe.get_traceback(), f"{platform} Integration Creation Failed")
                 continue
-        
+    
+    reconnect_integration = cache_data.get("reconnect_integration")
     frappe.cache().delete_value(f"oauth_state_{state}")
-    return _oauth_success_redirect(integration.name)
+    target_name = reconnect_integration or integration.name
+    return _oauth_success_redirect(target_name, reconnect_integration)
 
 def _save_integration(
     platform: str,
@@ -818,14 +828,22 @@ def _oauth_error_redirect(message: str):
     frappe.local.response["location"] = f"/app/social-integration?error={frappe.utils.quoted(message)}"
 
 
-def _oauth_success_redirect(integration_name: str):
+def _oauth_success_redirect(integration_name: str, reconnect_integration: str = None):
     """Render success page that auto-closes popup"""
     # Use safe parameter naming to avoid Frappe field validation issues
-    frappe.local.response["type"] = "redirect"
-    frappe.local.response["location"] = f"/app/social-integration"
-
-# youtube refresh token handler
+    if reconnect_integration:
+        location = (
+            f"/app/social-integration/{integration_name}"
+            f"#oauth_success={frappe.utils.quoted(integration_name)}"
+        )
+    else:
+        location = f"/app/social-integration#oauth_success={frappe.utils.quoted(integration_name)}"
     
+    frappe.local.response["type"] = "redirect"
+    frappe.local.response["location"] = location
+
+
+# YouTube refresh token handler  
 @frappe.whitelist()
 def refresh_youtube_token(integration_name: str) -> dict:
     """Refresh YouTube access token using refresh token"""

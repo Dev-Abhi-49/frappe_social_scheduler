@@ -98,7 +98,12 @@ class SocialPost(Document):
     def validate_facebook_content(self):
         """Facebook-specific validations"""            
         # Post validation
-        if self.is_fb_post:           
+        if self.is_fb_post:
+            
+            # if self.cta and self.cta != "Send Message" and not(self.link or self.url_build):
+            #     frappe.throw(_("Facebook Posts with CTA '{0}' require a link or URL build").format(self.cta),
+            #                 title=_("CTA Link Required"))
+                  
             for media_item in self.media:
                 file_type = (media_item.file_type or "").lower()
                 full_path = get_full_path(media_item.file)
@@ -489,7 +494,7 @@ class SocialPost(Document):
             if self.thumbnail:
                 # Thumbnail validation will be handled by the provider
                 # Just check if file exists
-                thumbnail_path = frappe.get_site_path("public", self.thumbnail.lstrip("/"))
+                thumbnail_path = frappe.get_site_path(self.thumbnail.lstrip("/"))
                 if not os.path.exists(thumbnail_path):
                     frappe.throw(_("Thumbnail file not found: {0}").format(self.thumbnail))
                 
@@ -590,7 +595,6 @@ class SocialPost(Document):
                 return
 
         super().validate_update_after_submit()
-
 
 @frappe.whitelist()
 def get_platforms_for_organization(organization):

@@ -21,6 +21,8 @@
   "is_fb_reel",
   "column_break_ykdm",
   "is_fb_story",
+  "column_break_iaqc",
+  "is_live",
   "instagram_configuration_section",
   "is_ig_post",
   "column_break_fsjo",
@@ -40,11 +42,16 @@
   "column_break_fqal",
   "video_title",
   "media",
-  "small_text_aqno",
   "thumbnail",
   "cta",
   "link",
   "url_build",
+  "youtube_configuration_section",
+  "visibility",
+  "made_for_kids",
+  "age_restriction",
+  "column_break_agug",
+  "small_text_aqno",
   "schedule_post_section",
   "scheduled_time",
   "column_break_owve",
@@ -70,7 +77,7 @@
    "placeholder": "What's in your mind......"
   },
   {
-   "depends_on": "eval:doc.platform === \"YouTube\" && doc.is_yt_post == 0",
+   "depends_on": "eval:doc.platform === \"YouTube\" && doc.is_short == 0",
    "fieldname": "video_title",
    "fieldtype": "Data",
    "label": "Video Title"
@@ -200,7 +207,7 @@
    "depends_on": "eval:doc.platform === \"Facebook\"",
    "fieldname": "section_break_ixex",
    "fieldtype": "Section Break",
-   "label": "Facebook Configuration"
+   "label": "Facebook"
   },
   {
    "fieldname": "campagin",
@@ -246,7 +253,7 @@
    "depends_on": "eval:doc.platform === \"Instagram\"",
    "fieldname": "instagram_configuration_section",
    "fieldtype": "Section Break",
-   "label": "Instagram Configuration"
+   "label": "Instagram"
   },
   {
    "default": "0",
@@ -278,7 +285,7 @@
    "depends_on": "eval:doc.platform === \"YouTube\"",
    "fieldname": "section_break_kdcc",
    "fieldtype": "Section Break",
-   "label": "YouTube Configuration"
+   "label": "YouTube"
   },
   {
    "default": "0",
@@ -304,16 +311,16 @@
    "depends_on": "eval:doc.platform === \"Facebook\" && doc.is_fb_post == 1",
    "fieldname": "cta",
    "fieldtype": "Select",
-   "hidden": 1,
    "label": "CTA",
-   "options": "\nBuy Now\nShop Now\nOrder Now\nLearn More\nSign Up\nBook Now\nDownload\nContact Us",
-   "placeholder": "Select CTA"
+   "options": "\nBuy Now\nShop Now\nOrder Now\nLearn More\nSign Up\nBook Now\nDownload\nContact Us\nCall Now\nMessage",
+   "placeholder": "Select CTA",
+   "sort_options": 1
   },
   {
    "fieldname": "url_build",
    "fieldtype": "Data",
-   "hidden": 1,
-   "label": "URL Build"
+   "label": "URL Build",
+   "read_only": 1
   },
   {
    "default": "0",
@@ -347,10 +354,11 @@
    "read_only": 1
   },
   {
-   "depends_on": "eval:doc.platform === \"YouTube\" ",
    "fieldname": "small_text_aqno",
    "fieldtype": "Small Text",
-   "label": "Tags"
+   "hidden": 1,
+   "label": "Tags",
+   "placeholder": "#company #nature"
   },
   {
    "default": "0",
@@ -362,11 +370,55 @@
   {
    "fieldname": "column_break_vsfa",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "visibility",
+   "fieldtype": "Select",
+   "label": "Visibility",
+   "options": "\nPublic\nUnlisted\nPrivate",
+   "placeholder": "Public, Private or Unlisted ",
+   "sort_options": 1
+  },
+  {
+   "depends_on": "eval:doc.platform === \"YouTube\" ",
+   "fieldname": "youtube_configuration_section",
+   "fieldtype": "Section Break",
+   "label": "YouTube Configuration"
+  },
+  {
+   "fieldname": "made_for_kids",
+   "fieldtype": "Select",
+   "label": "Made For Kids",
+   "options": "\nYes\nNo",
+   "placeholder": "Yes/No",
+   "sort_options": 1
+  },
+  {
+   "fieldname": "age_restriction",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Age Restriction",
+   "options": "\nYes, restrict my video to viewers over 18\nNo, don't restrict my video to viewers over 18 only",
+   "read_only_depends_on": "eval:doc.made_for_kids === \"Yes\""
+  },
+  {
+   "fieldname": "column_break_agug",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_iaqc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_live",
+   "fieldtype": "Check",
+   "label": "Is Live"
   }
  ],
  "hide_toolbar": 1,
  "links": [],
- "modified": "2026-02-13 17:04:48.920522",
+ "modified": "2026-02-16 17:32:57.351449",
  "modified_by": "Administrator",
  "module": "Frappe Social",
  "name": "Social Post",

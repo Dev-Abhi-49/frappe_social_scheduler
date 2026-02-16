@@ -1,5 +1,6 @@
 // Copyright (c) 2026, Frappe Social and contributors
 // For license information, please see license.txt
+
 frappe.ui.form.on('Social Post', {
     refresh: function (frm) {
         if (frm.is_new()) {
@@ -93,7 +94,6 @@ frappe.ui.form.on('Social Post', {
             frm.set_value('is_short', 0);
         }
     },
-
 
     is_fb_post(frm) {
         if (frm.doc.is_fb_post) {
@@ -862,10 +862,7 @@ function update_account_details(frm) {
 }
 
 frappe.ui.form.on('Social Post Media', {
-    file: function (frm, cdt, cdn) {
-        let row = frappe.get_doc(cdt, cdn);
-
-
+    file: function (frm) {
         if (!frm.doc.file) return;
 
         frappe.db.get_value(
@@ -896,75 +893,55 @@ function auto_build_utm(frm) {
 
     utm_build_timeout = setTimeout(() => {
         auto_build_utm_url(frm);
-    }, 1000);
+    }, 300);
 }
 
 function auto_build_utm_url(frm) {
-    // Only auto-build if we have the necessary info
-    if (!frm.doc.link) {
-        return;
-    }
+    if (!frm.doc.link) return;
 
-    // Validate and fix URL format
     let link = frm.doc.link.trim();
     let url;
 
+    // 1. Normalize URL (add https:// if missing)
     try {
-        // Try to parse the URL
         url = new URL(link);
     } catch (e) {
-        // If it fails, try adding https://
         if (!link.startsWith('http://') && !link.startsWith('https://')) {
             try {
-                // Add https:// for url_build, but DON'T update the link field
                 url = new URL('https://' + link);
-
             } catch (e2) {
-
                 return;
             }
         } else {
             return;
         }
-
-        // Auto-fill UTM parameters
-        let utm_source = '';
-        let utm_medium = 'social';
-        let utm_campaign = '';
-        let utm_postname = '';
-
-        // Get utm_source from platform
-        if (frm.doc.platform) {
-            utm_source = frm.doc.platform.toLowerCase();
-        }
-
-        if (frm.doc.post_name) {
-            utm_postname = frm.doc.post_name.toLowerCase();
-        }
-
-        // Get utm_campaign from campaign field
-        if (frm.doc.campagin) {
-            frappe.db.get_value('Marketing Campaign', frm.doc.campagin, 'name', (r) => {
-                if (r && r.name) {
-                    utm_campaign = r.name.toLowerCase().replace(/\s+/g, '_');
-                    build_and_set_url(frm, url, utm_source, utm_medium, utm_campaign, utm_postname);
-                } else {
-                    build_and_set_url(frm, url, utm_source, utm_medium, utm_campaign, utm_postname);
-                }
-            });
-        } else {
-            build_and_set_url(frm, url, utm_source, utm_medium, utm_campaign, utm_postname);
-        }
     }
 
-    // Build and set the URL
+    // 2. Now build UTM (this runs for BOTH valid URLs and fixed ones)
+    let utm_source = frm.doc.platform ? frm.doc.platform.toLowerCase() : '';
+    let utm_medium = 'social';
+    let utm_campaign = '';
+    let utm_postname = frm.doc.post_name ? frm.doc.post_name.toLowerCase() : '';
+
+    // Get campaign name (async)
+    if (frm.doc.campagin) {
+        frappe.db.get_value('Marketing Campaign', frm.doc.campagin, 'name', (r) => {
+            if (r && r.name) {
+                utm_campaign = r.name.toLowerCase().replace(/\s+/g, '_');
+            }
+            build_and_set_url(frm, url, utm_source, utm_medium, utm_campaign, utm_postname);
+        });
+    } else {
+        build_and_set_url(frm, url, utm_source, utm_medium, utm_campaign, utm_postname);
+    }
+
+    // Helper
     function build_and_set_url(frm, url, utm_source, utm_medium, utm_campaign, utm_postname) {
-        // Only build if we have at least source and medium
+        // Require at least source + campaign (you can relax this if you want)
         if (!utm_source || !utm_campaign) {
             let missing = [];
             if (!utm_source) missing.push('Platform');
             if (!utm_campaign) missing.push('Campaign');
-
             frappe.show_alert({
                 message: __('⚠️ Cannot build UTM URL. Missing: ') + missing.join(', '),
                 indicator: 'orange'
@@ -972,23 +949,16 @@ function auto_build_utm_url(frm) {
             return;
         }
 
-        // Add UTM parameters
-        if (utm_source) url.searchParams.set('utm_wsource', utm_source);
-        if (utm_medium) url.searchParams.set('utm_wmedium', utm_medium);
-        if (utm_campaign) url.searchParams.set('utm_wcampaign', utm_campaign);
+        // Add parameters
+        url.searchParams.set('utm_wsource', utm_source);
+        url.searchParams.set('utm_wmedium', utm_medium);
+        url.searchParams.set('utm_wcampaign', utm_campaign);
         if (utm_postname) url.searchParams.set('utm_wpostname', utm_postname);
 
         const built_url = url.toString();
 
-        // Only update if it's different
         if (frm.doc.url_build !== built_url) {
             frm.set_value('url_build', built_url);
-
-            // Show detailed notification
-            let params_text = `${utm_source}/${utm_medium}`;
-            if (utm_campaign) params_text += `/${utm_campaign}`;
-            if (utm_postname) params_text += `/${utm_postname}`;
-
         }
     }
 }

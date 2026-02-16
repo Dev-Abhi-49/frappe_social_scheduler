@@ -14,6 +14,7 @@ def fetch_analytics(integration: str) -> dict:
 
 @frappe.whitelist()
 def fetch_post_analytics_now(post_name: str) -> dict:
+    """ Fetch and store analytics for a specific post immediately (can be used for manual refresh) """
     post = frappe.get_doc("Social Post", post_name)
     result = AnalyticsService.fetch_post_analytics(post_name, post.platform)
 

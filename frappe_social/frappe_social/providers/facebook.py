@@ -17,14 +17,16 @@ class FacebookProvider(BaseProvider):
    
     SUPPORTS_IMAGES = True
     SUPPORTS_VIDEO = True
+    SUPPORTS_FILE = True 
    
     MAX_IMAGES = 10
    
     DAILY_POST_LIMIT = 200
     ALLOWS_MULTI_VIDEO = False
-   
-    ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif"]
-    ALLOWED_VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/mov"]
+    
+    ALLOW_FILE_TYPES = ["application/pdf"]
+    ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/jpg", "image/png"]
+    ALLOWED_VIDEO_TYPES = ["video/mp4"]
    
     MAX_IMAGE_SIZE = 8 * 1024 * 1024  # 8 MB
     MAX_VIDEO_SIZE = 4000 * 1024 * 1024  # 4 GB
@@ -55,6 +57,8 @@ class FacebookProvider(BaseProvider):
             "Book Now": "BOOK_NOW",
             "Download": "DOWNLOAD",
             "Contact Us": "CONTACT_US",
+            "Message": "MESSAGE_PAGE",
+            "Call Now": "CALL_NOW",
         }
         return mapping.get(cta_type)
 
@@ -105,6 +109,12 @@ class FacebookProvider(BaseProvider):
         try:
             attached_media = []
             
+            # Handle CTA
+            cta = kwargs.get("cta")
+            link = kwargs.get("link")
+            url_build = kwargs.get("url_build")
+            final_link = url_build # if url_build else link
+            
             # Handle media files
             for media in media_files or []:
                 file_path = getattr(media, "file_url", None) or media
@@ -124,6 +134,27 @@ class FacebookProvider(BaseProvider):
                             data={"description": content or "", "access_token": page_token},
                             timeout=600,
                         ).json()
+                                        
+                    # data = {
+                    #     "description": content or "",
+                    #     "access_token": page_token,
+                    # }
+                    
+                    # if cta:
+                    #     cta_type = self._map_cta(cta)
+                    #     if cta_type:
+                    #         cta_obj = {"type": cta_type}
+                    #         if final_link and cta_type != "MESSAGE_PAGE":
+                    #             cta_obj["value"] = {"link": final_link}
+                    #         data["call_to_action"] = frappe.as_json(cta_obj)
+                    
+                    # with open(full_path, "rb") as f:
+                    #     video_resp = requests.post(
+                    #         f"{self.api_base}/{page_id}/videos",
+                    #         files={"source": f},
+                    #         data=data,
+                    #         timeout=600,
+                    #     ).json()
 
                     if "id" not in video_resp:
                         return self._handle_error(video_resp, "Video upload failed")
@@ -148,7 +179,18 @@ class FacebookProvider(BaseProvider):
                 
             # Create post data
             data = {"access_token": page_token, "message": content or ""}
-            
+
+            # if cta:
+            #     cta_type = self._map_cta(cta)
+            #     if cta_type:
+            #         cta_obj = {"type": cta_type}
+            #         if final_link and cta_type != "MESSAGE_PAGE":
+            #             cta_obj["value"] = {"link": final_link}
+            #         data["call_to_action"] = frappe.as_json(cta_obj)
+            # Fallback: plain link post (no CTA)
+            # elif final_link and not attached_media:
+            #     data["link"] = final_link
+
             # Handle scheduling
             # if scheduled_time:
             #     data.update(
@@ -158,21 +200,15 @@ class FacebookProvider(BaseProvider):
             #         }
             #     )
 
-            # Handle CTA
-            # cta = kwargs.get("cta")
-            # link = kwargs.get("link")
-            # url_build = kwargs.get("url_build")
-            # final_link = url_build if url_build else link
-
-            # if cta and final_link:
-            #     cta_type = self._map_cta(cta)
-            #     if cta_type:
-            #         if attached_media:
-            #             data["call_to_action"] = frappe.as_json(
-            #                 {"type": cta_type, "value": {"link": final_link}}
-            #             )
-            #         else:
-            #             data["link"] = final_link
+            if cta and final_link:
+                cta_type = self._map_cta(cta)
+                if cta_type:
+                    if attached_media:
+                        data["call_to_action"] = frappe.as_json(
+                            {"type": cta_type, "value": {"link": final_link}}
+                        )
+                    else:
+                        data["link"] = final_link
 
             # Attach media for multi-image posts
             for i, media_item in enumerate(attached_media):

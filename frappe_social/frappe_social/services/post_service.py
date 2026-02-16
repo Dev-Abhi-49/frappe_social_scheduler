@@ -353,7 +353,7 @@ class PostService:
                         success=False,
                         error_message="YouTube Shorts require video files (.mp4 or .mov)"
                     )
-                
+
                 # Video title is required for Shorts
                 video_title = getattr(post, "video_title", None)
                 if not video_title:
@@ -361,7 +361,7 @@ class PostService:
                         success=False,
                         error_message="YouTube Shorts require a video title"
                     )
-
+                    
             elif is_video:
                 # Regular videos require exactly one video
                 frappe.logger().info("Validating YouTube Video")
@@ -397,14 +397,14 @@ class PostService:
             video_title = getattr(post, "video_title", None)
             tags = getattr(post, "small_text_aqno", None)  # Tags field
             thumbnail = getattr(post, "thumbnail", None)
-            scheduled_time = getattr(post, "scheduled_time", None)
-            
-            # Default privacy to public, but can be overridden
+            visibility = getattr(post, "visibility", None)
+            made_for_kids = getattr(post, "made_for_kids", None)
+
+            # Map visibility to privacy_status (default to public)
             privacy_status = "public"
-            
-            # If scheduled time is set, must be private initially
-            if scheduled_time:
-                privacy_status = "private"
+            if visibility:
+                # Convert "Public"/"Unlisted"/"Private" to lowercase for API
+                privacy_status = visibility.strip().lower()
             
             # Video category defaults to "22" (People & Blogs)
             video_category = "22"
@@ -416,7 +416,6 @@ class PostService:
                 - Has Tags: {bool(tags)}
                 - Has Thumbnail: {bool(thumbnail)}
                 - Privacy: {privacy_status}
-                - Scheduled: {bool(scheduled_time)}
                 - Media Count: {len(media_files) if media_files else 0}
                 """)
 
@@ -431,8 +430,9 @@ class PostService:
                 is_video=is_video,
                 thumbnail=thumbnail,
                 privacy_status=privacy_status,
-                scheduled_time=scheduled_time,
                 video_category=video_category,
+                social_post_name=post.name,
+                made_for_kids=made_for_kids,
             )
 
         except Exception as e:

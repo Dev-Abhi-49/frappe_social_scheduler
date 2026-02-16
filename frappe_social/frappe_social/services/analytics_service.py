@@ -61,8 +61,14 @@ class AnalyticsService:
             # Store all metrics in detailed metrics table with change tracking
             for metric_name, value in result.metrics.items():
                 prev_value = previous.get(metric_name, 0) if previous else 0
-                change = value - prev_value
-                change_percent = (change / prev_value * 100) if prev_value != 0 else 0
+                
+                if isinstance(value, (int, float)) and isinstance(prev_value, (int, float)):
+                    change = value - prev_value
+                    change_percent = (change / prev_value * 100) if prev_value != 0 else 0
+                else:
+                    change = 0
+                    change_percent = 0
+    
                 analytics.append(
                     "metrics",
                     {

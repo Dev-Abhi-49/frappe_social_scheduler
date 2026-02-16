@@ -15,41 +15,35 @@ frappe.listview_settings['Social Integration'] = {
     },
 
     onload: function (listview) {
-        // Check for OAuth completion
+        // Handle successful OAuth from "Connect Account"
         const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('oauth_state') === 'complete') {
-            const integrationName = urlParams.get('name');
-            const platform = urlParams.get('platform');
+        const oauthSuccess = urlParams.get('oauth_success');
 
-            if (integrationName) {
-                frappe.show_alert({
-                    message: __('Account connected successfully'),
-                    indicator: 'green'
-                }, 5);
+        if (oauthSuccess) {
+            frappe.show_alert({
+                message: __('Account connected successfully'),
+                indicator: 'green'
+            }, 5);
 
-                // Refresh the list
-                listview.refresh();
+            listview.refresh();
 
-                // Clean up URL
-                window.history.replaceState({}, document.title, '/app/social-integration');
-            }
+            // Clean URL
+            window.history.replaceState({}, document.title, '/app/social-integration');
         }
-        // Remove the default "+ Add Social Integration" button
+
+        // Remove default + Add button
         listview.page.clear_primary_action();
 
-        // Add "Social Integration" button
-        // listview.page.set_primary_action(__('Social Integration'), function () {
-        //     show_connect_dialog();
-        // }, 'add');
+        // Add our Connect button
+        listview.page.set_primary_action(__('Connect Account'), () => show_connect_dialog(), 'add');
 
-        // Add bulk disconnect action
+        // Bulk disconnect
         listview.page.add_action_item(__('Disconnect Selected'), function () {
             const selected = listview.get_checked_items();
             if (selected.length === 0) {
                 frappe.msgprint(__('Please select accounts to disconnect'));
                 return;
             }
-
             frappe.confirm(
                 __('Disconnect {0} account(s)?', [selected.length]),
                 function () {
@@ -64,7 +58,6 @@ frappe.listview_settings['Social Integration'] = {
                 }
             );
         });
-
     },
 
     refresh(listview) {

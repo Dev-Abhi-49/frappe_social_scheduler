@@ -183,7 +183,7 @@ class YouTubeProvider(BaseProvider):
 
     def _publish_video(self, content: str, media_files: list, video_title: str, tags: str,
                        is_short: bool, thumbnail: str, privacy_status: str, scheduled_time: str,
-                       video_category: str, access_token: str) -> PublishResult:
+                       video_category: str, access_token: str, social_post_name: str = None,**kwargs) -> PublishResult:
         """Upload video (Short or regular) to YouTube"""
         
         if not media_files or len(media_files) == 0:
@@ -197,11 +197,38 @@ class YouTubeProvider(BaseProvider):
         if not self._check_quota(total_quota_needed):
             return PublishResult(success=False, error_message=f"Daily quota exceeded (need {total_quota_needed} units)")
         
-        try:
+        try:     
+            visibility_setting = None
+            made_for_kids_setting = None
+            
+            if social_post_name:
+                try:
+                    post_config = frappe.db.get_value(
+                        "Social Post",
+                        social_post_name,
+                        ["visibility", "made_for_kids", "age_restriction"],
+                        as_dict=1
+                    )
+                    if post_config:
+                        visibility_setting = post_config.get("visibility")
+                        made_for_kids_setting = post_config.get("made_for_kids")
+                        # age_restriction is stored for reference but cannot be set via API
+                except Exception as e:
+                    frappe.log_error(f"Failed to fetch post config: {str(e)}", "YouTube Provider")
+            
+            # Map visibility from UI values (Public/Unlisted/Private) to API values (public/unlisted/private)
+            if visibility_setting:
+                privacy_status = visibility_setting.strip().lower()
+            
+            # Map made_for_kids from UI values (Yes/No) to boolean
+            self_declared_made_for_kids = False
+            if made_for_kids_setting:
+                self_declared_made_for_kids = (made_for_kids_setting.strip().lower() == "yes")
+            
             file_doc = media_files[0]
             file_path = file_doc.file_url if hasattr(file_doc, 'file_url') else file_doc
             full_path = get_full_path(file_path)
-            
+                        
             # Parse tags
             video_tags = self._parse_tags(tags)
             
@@ -228,14 +255,14 @@ class YouTubeProvider(BaseProvider):
                 },
                 "status": {
                     "privacyStatus": privacy_status,
-                    "selfDeclaredMadeForKids": False,
+                    "selfDeclaredMadeForKids": self_declared_made_for_kids,
                     "embeddable": True,
                     "publicStatsViewable": True
                 }
             }
             
             # Add scheduled time if provided
-            if scheduled_time and privacy_status == "private":
+            if scheduled_time:
                 # Convert to ISO 8601 format if needed
                 if isinstance(scheduled_time, str):
                     try:
@@ -363,7 +390,7 @@ class YouTubeProvider(BaseProvider):
     def _upload_thumbnail(self, video_id: str, thumbnail_path: str, access_token: str) -> bool:
         """Upload custom thumbnail for video"""
         try:
-            full_thumbnail_path = get_full_path(file_path)
+            full_thumbnail_path = get_full_path(thumbnail_path)
             
             if not os.path.exists(full_thumbnail_path):
                 frappe.log_error(f"Thumbnail not found: {full_thumbnail_path}", "YouTube Provider")
