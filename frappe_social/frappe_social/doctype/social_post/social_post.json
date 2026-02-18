@@ -77,7 +77,7 @@
    "placeholder": "What's in your mind......"
   },
   {
-   "depends_on": "eval:doc.platform === \"YouTube\" && doc.is_short == 0",
+   "depends_on": "eval:doc.platform === \"YouTube\"",
    "fieldname": "video_title",
    "fieldtype": "Data",
    "label": "Video Title"
@@ -418,7 +418,7 @@
  ],
  "hide_toolbar": 1,
  "links": [],
- "modified": "2026-02-16 17:32:57.351449",
+ "modified": "2026-02-18 11:00:35.520667",
  "modified_by": "Administrator",
  "module": "Frappe Social",
  "name": "Social Post",
