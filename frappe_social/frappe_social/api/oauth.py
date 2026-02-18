@@ -140,8 +140,6 @@ def _get_auth_url(platform: str, settings, redirect_uri: str, state: str) -> str
 # =============================================================================
 # OAuth Callbacks
 # =============================================================================
-
-
 @frappe.whitelist(allow_guest=True)
 def callback_twitter():
     code, state, error = (
