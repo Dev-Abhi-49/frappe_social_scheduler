@@ -1,0 +1,262 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-02-25 12:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "basic_info_section",
+  "ads_account_integration",
+  "analytics_date",
+  "column_break_main",
+  "last_synced",
+  "sync_status",
+  "performance_section",
+  "spend",
+  "impressions",
+  "column_break_perf",
+  "clicks",
+  "ctr",
+  "cpc",
+  "engagement_section",
+  "reach",
+  "frequency",
+  "column_break_engage",
+  "actions_count",
+  "action_rate",
+  "cost_per_action",
+  "campaigns_section",
+  "active_campaigns",
+  "total_campaigns",
+  "column_break_camp",
+  "adsets_count",
+  "ads_count",
+  "advanced_metrics_section",
+  "conversions",
+  "conversion_rate",
+  "column_break_adv",
+  "purchase_roas",
+  "cost_per_purchase",
+  "metrics_table_section",
+  "raw_metrics",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "basic_info_section",
+   "fieldtype": "Section Break",
+   "label": "Basic Information"
+  },
+  {
+   "fieldname": "ads_account_integration",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Ads Account Integration",
+   "options": "Ads Account Integration",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "analytics_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Analytics Date",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_synced",
+   "fieldtype": "Datetime",
+   "label": "Last Synced",
+   "read_only": 1
+  },
+  {
+   "default": "Success",
+   "fieldname": "sync_status",
+   "fieldtype": "Select",
+   "label": "Sync Status",
+   "options": "Success\nPending\nFailed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "performance_section",
+   "fieldtype": "Section Break",
+   "label": "Performance Metrics"
+  },
+  {
+   "fieldname": "spend",
+   "fieldtype": "Currency",
+   "label": "Total Spend",
+   "precision": "2"
+  },
+  {
+   "fieldname": "impressions",
+   "fieldtype": "Int",
+   "label": "Impressions"
+  },
+  {
+   "fieldname": "column_break_perf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "clicks",
+   "fieldtype": "Int",
+   "label": "Clicks"
+  },
+  {
+   "fieldname": "ctr",
+   "fieldtype": "Percent",
+   "label": "CTR (%)",
+   "precision": "2"
+  },
+  {
+   "fieldname": "cpc",
+   "fieldtype": "Currency",
+   "label": "Cost Per Click",
+   "precision": "2"
+  },
+  {
+   "fieldname": "engagement_section",
+   "fieldtype": "Section Break",
+   "label": "Engagement Metrics"
+  },
+  {
+   "fieldname": "reach",
+   "fieldtype": "Int",
+   "label": "Reach"
+  },
+  {
+   "fieldname": "frequency",
+   "fieldtype": "Float",
+   "label": "Frequency",
+   "precision": "2"
+  },
+  {
+   "fieldname": "column_break_engage",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "actions_count",
+   "fieldtype": "Int",
+   "label": "Actions"
+  },
+  {
+   "fieldname": "action_rate",
+   "fieldtype": "Percent",
+   "label": "Action Rate (%)",
+   "precision": "2"
+  },
+  {
+   "fieldname": "cost_per_action",
+   "fieldtype": "Currency",
+   "label": "Cost Per Action",
+   "precision": "2"
+  },
+  {
+   "fieldname": "campaigns_section",
+   "fieldtype": "Section Break",
+   "label": "Campaign Overview"
+  },
+  {
+   "fieldname": "active_campaigns",
+   "fieldtype": "Int",
+   "label": "Active Campaigns"
+  },
+  {
+   "fieldname": "total_campaigns",
+   "fieldtype": "Int",
+   "label": "Total Campaigns"
+  },
+  {
+   "fieldname": "column_break_camp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "adsets_count",
+   "fieldtype": "Int",
+   "label": "Ad Sets"
+  },
+  {
+   "fieldname": "ads_count",
+   "fieldtype": "Int",
+   "label": "Ads"
+  },
+  {
+   "fieldname": "advanced_metrics_section",
+   "fieldtype": "Section Break",
+   "label": "Conversion & ROI"
+  },
+  {
+   "fieldname": "conversions",
+   "fieldtype": "Int",
+   "label": "Conversions"
+  },
+  {
+   "fieldname": "conversion_rate",
+   "fieldtype": "Percent",
+   "label": "Conversion Rate (%)",
+   "precision": "2"
+  },
+  {
+   "fieldname": "column_break_adv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "purchase_roas",
+   "fieldtype": "Float",
+   "label": "Purchase ROAS",
+   "precision": "2"
+  },
+  {
+   "fieldname": "cost_per_purchase",
+   "fieldtype": "Currency",
+   "label": "Cost Per Purchase",
+   "precision": "2"
+  },
+  {
+   "fieldname": "metrics_table_section",
+   "fieldtype": "Section Break",
+   "label": "Raw Metrics Data"
+  },
+  {
+   "fieldname": "raw_metrics",
+   "fieldtype": "Code",
+   "label": "Raw Metrics JSON",
+   "options": "json"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Text",
+   "label": "Notes"
+  }
+ ],
+ "in_create": 1,
+ "links": [],
+ "modified": "2026-02-25 15:29:08.681566",
+ "modified_by": "Administrator",
+ "module": "Ads Manager",
+ "name": "Ads Analytics",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

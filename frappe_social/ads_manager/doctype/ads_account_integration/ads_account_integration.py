@@ -19,6 +19,9 @@ class AdsAccountIntegration(Document):
     def get_page_access_token(self) -> str:
         return self.get_password("page_access_token") if self.page_access_token else None
 
+    def get_oauth_1_token(self):
+        return self.get_password('oauth_1_token') if self.oauth_1_token else None
+    
     def get_oauth_1_secret(self):
         return self.get_password("oauth_1_secret") if self.oauth_1_secret else None
 
@@ -27,6 +30,12 @@ class AdsAccountIntegration(Document):
             return False
         return get_datetime(self.token_expiry) < get_datetime(now_datetime())
 
+    def is_token_expiring_soon(self, days: int = 5) -> bool:
+        if not self.token_expiry:
+            return False
+        threshold = add_to_date(now_datetime(), days=days)
+        return get_datetime(self.token_expiry) < get_datetime(threshold)
+    
     def update_tokens(self, access_token: str = None, refresh_token: str = None, expires_in: int = None):
         if access_token:
             self.access_token = access_token

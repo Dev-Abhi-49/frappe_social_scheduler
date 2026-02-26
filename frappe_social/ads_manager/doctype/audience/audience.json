@@ -1,0 +1,262 @@
+{
+    "actions": [],
+    "allow_rename": 1,
+    "creation": "2026-02-20 11:18:36.010502",
+    "doctype": "DocType",
+    "engine": "InnoDB",
+    "field_order": [
+        "audience_name",
+        "audience_id",
+        "column_break_1",
+        "select_ad_account",
+        "status",
+        "audience_type_section",
+        "subtype",
+        "description",
+        "column_break_2",
+        "retention_days",
+        "customer_file_source",
+        "crm_section",
+        "schema_type",
+        "crm_data",
+        "pixel_section",
+        "pixel_id",
+        "pixel_event",
+        "app_section",
+        "application_id",
+        "app_event",
+        "engagement_section",
+        "engagement_source_type",
+        "engagement_source_id",
+        "lookalike_section",
+        "origin_audience_id",
+        "lookalike_country",
+        "lookalike_type",
+        "lookalike_ratio"
+    ],
+    "fields": [
+        {
+            "fieldname": "audience_name",
+            "fieldtype": "Data",
+            "in_list_view": 1,
+            "label": "Audience Name",
+            "reqd": 1
+        },
+        {
+            "fieldname": "audience_id",
+            "fieldtype": "Data",
+            "in_list_view": 1,
+            "label": "Audience ID",
+            "read_only": 1
+        },
+        {
+            "fieldname": "column_break_1",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "select_ad_account",
+            "fieldtype": "Link",
+            "label": "Ad Account",
+            "options": "Ads Account Integration",
+            "reqd": 1
+        },
+        {
+            "fieldname": "status",
+            "fieldtype": "Select",
+            "in_list_view": 1,
+            "label": "Status",
+            "options": "\nReady\nNew\nUnknown",
+            "read_only": 1
+        },
+        {
+            "fieldname": "audience_type_section",
+            "fieldtype": "Section Break",
+            "label": "Audience Type"
+        },
+        {
+            "fieldname": "subtype",
+            "fieldtype": "Select",
+            "in_list_view": 1,
+            "label": "Audience Type",
+            "options": "\nCUSTOM\nWEBSITE\nAPP\nENGAGEMENT\nLOOKALIKE",
+            "reqd": 1
+        },
+        {
+            "fieldname": "description",
+            "fieldtype": "Small Text",
+            "label": "Description"
+        },
+        {
+            "fieldname": "column_break_2",
+            "fieldtype": "Column Break"
+        },
+        {
+            "default": "30",
+            "depends_on": "eval:['WEBSITE','APP','ENGAGEMENT'].includes(doc.subtype)",
+            "description": "How many days to retain audience members (1\u2013180)",
+            "fieldname": "retention_days",
+            "fieldtype": "Int",
+            "label": "Retention Days"
+        },
+        {
+            "depends_on": "eval:doc.subtype == 'CUSTOM'",
+            "fieldname": "customer_file_source",
+            "fieldtype": "Select",
+            "label": "Customer File Source",
+            "options": "\nUSER_PROVIDED_ONLY\nPARTNER_PROVIDED_ONLY\nBOTH_USER_AND_PARTNER_PROVIDED"
+        },
+        {
+            "depends_on": "eval:doc.subtype == 'CUSTOM'",
+            "fieldname": "crm_section",
+            "fieldtype": "Section Break",
+            "label": "Customer List Data"
+        },
+        {
+            "depends_on": "eval:doc.subtype == 'CUSTOM'",
+            "description": "Data will be SHA-256 hashed before sending to Meta",
+            "fieldname": "schema_type",
+            "fieldtype": "Select",
+            "label": "Match Key",
+            "options": "\nEMAIL\nPHONE\nEMAIL_AND_PHONE"
+        },
+        {
+            "depends_on": "eval:doc.subtype == 'CUSTOM'",
+            "description": "Enter raw emails or phone numbers \u2014 they will be hashed automatically",
+            "fieldname": "crm_data",
+            "fieldtype": "Long Text",
+            "label": "Customer Data (one per line)"
+        },
+        {
+            "depends_on": "eval:doc.subtype == 'WEBSITE'",
+            "fieldname": "pixel_section",
+            "fieldtype": "Section Break",
+            "label": "Pixel Settings"
+        },
+        {
+            "depends_on": "eval:doc.subtype == 'WEBSITE'",
+            "fieldname": "pixel_id",
+            "fieldtype": "Data",
+            "label": "Pixel ID"
+        },
+        {
+            "depends_on": "eval:doc.subtype == 'WEBSITE'",
+            "fieldname": "pixel_event",
+            "fieldtype": "Select",
+            "label": "Pixel Event",
+            "options": "\nPageView\nViewContent\nAddToCart\nInitiateCheckout\nPurchase\nLead\nCompleteRegistration\nSearch\nContact\nSubscribe"
+        },
+        {
+            "depends_on": "eval:doc.subtype == 'APP'",
+            "fieldname": "app_section",
+            "fieldtype": "Section Break",
+            "label": "App Settings"
+        },
+        {
+            "depends_on": "eval:doc.subtype == 'APP'",
+            "fieldname": "application_id",
+            "fieldtype": "Data",
+            "label": "Application ID"
+        },
+        {
+            "depends_on": "eval:doc.subtype == 'APP'",
+            "fieldname": "app_event",
+            "fieldtype": "Select",
+            "label": "App Event",
+            "options": "\nPURCHASE\nLEAD\nCOMPLETE_REGISTRATION\nADD_TO_CART\nINITIATE_CHECKOUT\nSEARCH\nVIEW_CONTENT\nACHIEVE_LEVEL\nUNLOCK_ACHIEVEMENT"
+        },
+        {
+            "depends_on": "eval:doc.subtype == 'ENGAGEMENT'",
+            "fieldname": "engagement_section",
+            "fieldtype": "Section Break",
+            "label": "Engagement Settings"
+        },
+        {
+            "depends_on": "eval:doc.subtype == 'ENGAGEMENT'",
+            "fieldname": "engagement_source_type",
+            "fieldtype": "Select",
+            "label": "Engagement Source",
+            "options": "\npage\ninstagram_business\nlead_generation"
+        },
+        {
+            "depends_on": "eval:doc.subtype == 'ENGAGEMENT'",
+            "fieldname": "engagement_source_id",
+            "fieldtype": "Data",
+            "label": "Page / Instagram Account ID"
+        },
+        {
+            "depends_on": "eval:doc.subtype == 'LOOKALIKE'",
+            "fieldname": "lookalike_section",
+            "fieldtype": "Section Break",
+            "label": "Lookalike Settings"
+        },
+        {
+            "depends_on": "eval:doc.subtype == 'LOOKALIKE'",
+            "description": "The audience to base this lookalike on",
+            "fieldname": "origin_audience_id",
+            "fieldtype": "Data",
+            "label": "Source Audience"
+        },
+        {
+            "depends_on": "eval:doc.subtype == 'LOOKALIKE'",
+            "fieldname": "lookalike_country",
+            "fieldtype": "Link",
+            "label": "Target Country",
+            "options": "Country"
+        },
+        {
+            "default": "similarity",
+            "depends_on": "eval:doc.subtype == 'LOOKALIKE'",
+            "fieldname": "lookalike_type",
+            "fieldtype": "Select",
+            "label": "Lookalike Type",
+            "options": "\nsimilarity\nreach"
+        },
+        {
+            "default": "0.01",
+            "depends_on": "eval:doc.subtype == 'LOOKALIKE'",
+            "description": "0.01 = top 1% similar, 0.10 = top 10%",
+            "fieldname": "lookalike_ratio",
+            "fieldtype": "Float",
+            "label": "Audience Size (ratio)"
+        },
+        {
+            "fieldname": "pixel_event",
+            "fieldtype": "Select",
+            "label": "Pixel Event",
+            "options": "\nPageView\nViewContent\nSearch\nAddToCart\nAddToWishlist\nInitiateCheckout\nAddPaymentInfo\nPurchase\nLead\nCompleteRegistration\nContact\nDonate\nSchedule\nStartTrial\nSubscribe\nSubmitApplication"
+        },
+        {
+            "fieldname": "app_event",
+            "fieldtype": "Select",
+            "label": "App Event",
+            "options": "\nACHIEVED_LEVEL\nADD_PAYMENT_INFO\nADD_TO_CART\nADD_TO_WISHLIST\nCOMPLETE_REGISTRATION\nCONTACT\nCUSTOMIZE_PRODUCT\nDONATE\nFIND_LOCATION\nINITIATED_CHECKOUT\nLEAD\nLISTED_PROPERTY\nPURCHASE\nRATED\nSCHEDULE\nSEARCH\nSPENT_CREDITS\nSTART_TRIAL\nSUBMIT_APPLICATION\nSUBSCRIBE\nUNLOCK_ACHIEVEMENT\nVIEW_CONTENT"
+        }
+    ],
+    "grid_page_length": 50,
+    "index_web_pages_for_search": 1,
+    "links": [],
+    "modified": "2026-02-20 12:01:51.777611",
+    "modified_by": "Administrator",
+    "module": "Ads Manager",
+    "name": "Audience",
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "System Manager",
+            "share": 1,
+            "write": 1
+        }
+    ],
+    "row_format": "Dynamic",
+    "rows_threshold_for_grid_search": 20,
+    "sort_field": "modified",
+    "sort_order": "DESC",
+    "states": []
+}

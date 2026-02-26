@@ -1,0 +1,189 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-02-17 15:04:30.375167",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "ad_name",
+  "platform",
+  "campaign",
+  "column_break_kxpe",
+  "organization",
+  "select_ad_account",
+  "status",
+  "section_break_owqn",
+  "partnership_ad",
+  "section_break_fqjy",
+  "select_ad_set",
+  "section_break_cgkw",
+  "html",
+  "post_details_section",
+  "content",
+  "character_limit",
+  "column_break_qxgh",
+  "media",
+  "section_break_qrje",
+  "schedule_time",
+  "column_break_wsas",
+  "id"
+ ],
+ "fields": [
+  {
+   "fieldname": "ad_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Ad Name",
+   "placeholder": "Name (e.g., New Year Post)",
+   "reqd": 1
+  },
+  {
+   "fieldname": "platform",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Platform",
+   "options": "Facebook\nInstagram\nYouTube\nTwitter\nLinkedin",
+   "placeholder": "Select Platform",
+   "reqd": 1
+  },
+  {
+   "fieldname": "organization",
+   "fieldtype": "Link",
+   "label": "Organization",
+   "options": "CRM Organization",
+   "placeholder": "Select Organization",
+   "reqd": 1
+  },
+  {
+   "fieldname": "select_ad_account",
+   "fieldtype": "Link",
+   "label": "Select Ad Account",
+   "options": "Ads Account Integration",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_kxpe",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Status",
+   "options": "Draft\nScheduled\nPublishing\nPublished\nFailed\nCancelled"
+  },
+  {
+   "fieldname": "section_break_fqjy",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "select_ad_set",
+   "fieldtype": "Link",
+   "label": "Select Ad Set",
+   "options": "Ad Set",
+   "reqd": 1
+  },
+  {
+   "fieldname": "post_details_section",
+   "fieldtype": "Section Break",
+   "label": "Post Details"
+  },
+  {
+   "fieldname": "content",
+   "fieldtype": "Text Editor",
+   "label": "Content",
+   "placeholder": "What's in your mind......"
+  },
+  {
+   "depends_on": "eval:doc.content",
+   "fieldname": "character_limit",
+   "fieldtype": "HTML",
+   "label": "Character Limit"
+  },
+  {
+   "fieldname": "media",
+   "fieldtype": "Table",
+   "label": "Media",
+   "options": "Social Post Media"
+  },
+  {
+   "fieldname": "section_break_cgkw",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "html",
+   "fieldtype": "HTML",
+   "label": "HTML"
+  },
+  {
+   "fieldname": "section_break_qrje",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "schedule_time",
+   "fieldtype": "Datetime",
+   "label": "Schedule Time"
+  },
+  {
+   "fieldname": "column_break_wsas",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "id",
+   "fieldtype": "Data",
+   "label": "ID"
+  },
+  {
+   "fieldname": "campaign",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Campaign",
+   "options": "Marketing Campaign",
+   "placeholder": "Select Campaign",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_qxgh",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_owqn",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "partnership_ad",
+   "fieldtype": "Check",
+   "label": "Partnership ad"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-02-23 09:54:11.802652",
+ "modified_by": "Administrator",
+ "module": "Ads Manager",
+ "name": "Post Ads",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

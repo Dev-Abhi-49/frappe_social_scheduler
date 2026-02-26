@@ -98,9 +98,9 @@ frappe.ui.form.on('Social Integration', {
         }
 
         // Show authorized user info
-        if (frm.doc.authorized_user_name) {
-            frm.set_intro(__('Authorized via: {0}', [frm.doc.authorized_user_name]), 'blue');
-        }
+        // if (frm.doc.authorized_user_name) {
+        //     frm.set_intro(__('Authorized via: {0}', [frm.doc.authorized_user_name]), 'blue');
+        // }
 
         // Show connection status indicator
         frm.trigger('update_status_indicator');

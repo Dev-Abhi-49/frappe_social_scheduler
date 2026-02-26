@@ -239,9 +239,9 @@ class YouTubeProvider(BaseProvider):
                 
                 # Also add to description if not present
                 description = content or ""
-                if "#Shorts" not in description and "#shorts" not in description.lower():
-                    description = f"{description}\n\n#Shorts" if description else "#Shorts"
-                content = description
+                # if "#Shorts" not in description and "#shorts" not in description.lower():
+                #     description = f"{description}\n\n#Shorts" if description else "#Shorts"
+                # content = description
             
             # Prepare metadata
             metadata = {
@@ -262,16 +262,16 @@ class YouTubeProvider(BaseProvider):
             }
             
             # Add scheduled time if provided
-            if scheduled_time:
-                # Convert to ISO 8601 format if needed
-                if isinstance(scheduled_time, str):
-                    try:
-                        dt = frappe.utils.get_datetime(scheduled_time)
-                        scheduled_time_iso = dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
-                        metadata["status"]["publishAt"] = scheduled_time_iso
-                        metadata["status"]["privacyStatus"] = "private"  # Must be private for scheduled
-                    except Exception as e:
-                        frappe.log_error(f"Schedule time parsing error: {str(e)}", "YouTube Provider")
+            # if scheduled_time:
+            #     # Convert to ISO 8601 format if needed
+            #     if isinstance(scheduled_time, str):
+            #         try:
+            #             dt = frappe.utils.get_datetime(scheduled_time)
+            #             scheduled_time_iso = dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+            #             metadata["status"]["publishAt"] = scheduled_time_iso
+            #             metadata["status"]["privacyStatus"] = "private"  # Must be private for scheduled
+            #         except Exception as e:
+            #             frappe.log_error(f"Schedule time parsing error: {str(e)}", "YouTube Provider")
             
             # Initiate resumable upload
             init_response = requests.post(

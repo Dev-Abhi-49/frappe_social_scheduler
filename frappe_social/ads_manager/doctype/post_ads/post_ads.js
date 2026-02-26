@@ -1,7 +1,9 @@
-// Copyright (c) 2026, Frappe Social and contributors
+// Copyright (c) 2026, Abhishek and contributors
 // For license information, please see license.txt
-frappe.ui.form.on('Social Post', {
-    refresh: function (frm) {
+
+frappe.ui.form.on('Post Ads', {
+    refresh(frm) {
+        // Clean UI for ads-only form
         if (frm.is_new()) {
             $('.page-actions button.text-muted.btn.btn-default.icon-btn').hide();
             $('.page-actions button.btn.btn-default.icon-btn').hide();
@@ -32,8 +34,6 @@ frappe.ui.form.on('Social Post', {
             frm.dashboard.clear_headline();
         }
 
-        frm.get_field('character_limit').$wrapper.css({ 'margin': '0', 'padding': '0', 'width': '100%' });
-
         if (frm.doc.status === 'Draft') {
             if (!frm.is_dirty()) {
                 frm.add_custom_button(__('Publish Now'), () => frm.trigger('publish_now'), __('Actions'));
@@ -60,58 +60,46 @@ frappe.ui.form.on('Social Post', {
         if (frm.doc.status === 'Published') {
             frm.add_custom_button(__('Fetch Analytics'), function () { frm.trigger('fetch_post_analytics'); }, __('Actions'));
             frm.add_custom_button(__('View Analytics'), function () {
-                frappe.set_route('List', 'Social Post Analytics', { social_post: frm.doc.name });
+                frappe.set_route('List', 'Ad Post Analytics', { social_post: frm.doc.name });
             }, __('Actions'));
         }
-
-        if (frm.doc.link && !frm.doc.url_build) {
-            auto_build_utm(frm);
-        }
-
-        let checked = 0;
-        if (frm.doc.is_post) checked++;
-        if (frm.doc.is_story) checked++;
-        if (frm.doc.is_reel) checked++;
-        if (checked > 1) {
-            // Optionally auto-resolve (e.g., prioritize one) or alert
-            frappe.msgprint('Only one option allowed. Resetting others.');
-            frm.set_value('is_story', 0);
-            frm.set_value('is_reel', 0);
-        }
     },
 
-
-    is_post(frm) {
-        if (frm.doc.is_post) {
-            frm.set_value('is_story', 0);
-            frm.set_value('is_reel', 0);
-        }
-    },
-    is_story(frm) {
-        if (frm.doc.is_story) {
-            frm.set_value('is_post', 0);
-            frm.set_value('is_reel', 0);
-        }
-    },
-    is_reel(frm) {
-        if (frm.doc.is_reel) {
-            frm.set_value('is_post', 0);
-            frm.set_value('is_story', 0);
-        }
+    organization: function (frm) {
+        frm.set_value('platform', '');
+        frm.set_value('select_ad_account', '');
+        apply_filters(frm);
+        update_account_details(frm);
     },
 
-    update_status_indicator: function (frm) {
-        let indicator = 'grey';
-        let status = frm.doc.status;
+    platform: function (frm) {
+        frm.set_value('select_ad_account', '');
+        apply_filters(frm);
+        update_account_details(frm);
+        update_character_count(frm);
+        // auto_build_utm(frm);
+    },
 
-        if (status === 'Draft') indicator = 'grey';
-        else if (status === 'Scheduled') indicator = 'blue';
-        else if (status === 'Publishing') indicator = 'royalblue';
-        else if (status === 'Published') indicator = 'green';
-        else if (status === 'Failed') indicator = 'orange';
-        else if (status === 'Cancelled') indicator = 'red';
+    select_ad_account: function (frm) {
+        frm.set_value('campaign', '');
+        frm.set_value('select_ad_set', '');
+        apply_filters(frm);
+        update_account_details(frm);
+    },
 
-        frm.page.set_indicator(status, indicator);
+    campaign: function (frm) {
+        frm.set_value('select_ad_set', '');
+        apply_filters(frm);
+        update_account_details(frm);
+    },
+
+    select_ad_set: function (frm) {
+        fetch_and_set_facebook_page(frm);
+        update_account_details(frm);
+    },
+
+    content: function (frm) {
+        update_character_count(frm);
     },
 
     after_save: function (frm) {
@@ -141,34 +129,29 @@ frappe.ui.form.on('Social Post', {
         }
     },
 
-    publish_now: function (frm) {
-        frappe.confirm(
-            __('Are you sure you want to publish post now?'),
-            function () {
-                frappe.call({
-                    method: 'frappe_social.frappe_social.api.posts.publish_now',
-                    args: { post_name: frm.doc.name },
-                    freeze: true,
-                    freeze_message: __('Publishing...'),
-                    callback: function (r) {
-                        if (r.message) {
-                            if (r.message.success) {
-                                frappe.msgprint({
-                                    message: __('Post published successfully'),
-                                    indicator: 'green'
-                                });
-                            } else {
-                                frappe.msgprint({
-                                    message: __('Publishing failed: ') + (r.message.error_message || 'Check error log'),
-                                    indicator: 'red'
-                                });
-                            }
-                            frm.reload_doc();
-                        }
+    publish_now(frm) {
+        frappe.confirm(__('Publish this ad to Meta now?'), () => {
+            frappe.call({
+                method: 'frappe_social.ads_manager.doctype.post_ads.post_ads.publish_ad',
+                args: { post_name: frm.doc.name },
+                freeze: true,
+                freeze_message: __('Publishing Ad to Meta...'),
+                callback: (r) => {
+                    if (r.message && r.message.success) {
+                        frappe.msgprint({
+                            message: __('✅ Ad published successfully! Meta ID: ') + r.message.ad_id,
+                            indicator: 'green'
+                        });
+                    } else {
+                        frappe.msgprint({
+                            message: __('❌ Publish failed: ') + (r.message?.error_message || 'Check Error Log'),
+                            indicator: 'red'
+                        });
                     }
-                });
-            }
-        );
+                    frm.reload_doc();
+                }
+            });
+        });
     },
 
     schedule_post: function (frm) {
@@ -271,6 +254,7 @@ frappe.ui.form.on('Social Post', {
             }, __('Schedule Post'));
         }
     },
+
     reschedule_post: function (frm) {
         function show_reschedule_prompt() {
             frappe.prompt({
@@ -356,90 +340,22 @@ frappe.ui.form.on('Social Post', {
         );
     },
 
-    retry_post: function (frm) {
-        frappe.confirm(
-            __('Retry publishing this failed post?'),
-            function () {
-                frappe.call({
-                    method: 'frappe_social.frappe_social.api.posts.publish_now',
-                    args: { post_name: frm.doc.name },
-                    freeze: true,
-                    freeze_message: __('Retrying...'),
-                    callback: function (r) {
-                        if (r.message && r.message.success) {
-                            frappe.show_alert({
-                                message: __('Post retry initiated'),
-                                indicator: 'green'
-                            });
-                            frm.reload_doc();
-                        } else {
-                            frappe.msgprint({
-                                message: __('Retry failed: ') + (r.message?.error_message || 'Check error log'),
-                                indicator: 'red'
-                            });
-                        }
-                    }
-                });
-            }
-        );
+    retry_post(frm) {
+        // Retry = re-publish
+        frm.trigger('publish_now');
     },
 
-    organization: function (frm) {
-        frm.set_value('platform', '');
-        frm.set_value('account', '');
-        apply_filters(frm);
-        update_account_details(frm);
-    },
+    update_status_indicator(frm) {
+        let indicator = 'grey';
+        const status = frm.doc.status;
 
-    platform: function (frm) {
-        frm.set_value('account', '');
-        apply_filters(frm);
-        update_account_details(frm);
-        update_character_count(frm);
-        auto_build_utm(frm);
-    },
+        if (status === 'Draft') indicator = 'grey';
+        else if (status === 'Publishing') indicator = 'blue';
+        else if (status === 'Published') indicator = 'green';
+        else if (status === 'Failed') indicator = 'red';
 
-    link: function (frm) {
-        auto_build_utm(frm)
-    },
-
-    account: function (frm) {
-        update_account_details(frm);
-    },
-
-    content: function (frm) {
-        update_character_count(frm);
-    },
-
-
-    fetch_post_analytics: function (frm) {
-        frappe.call({
-            method: 'frappe_social.frappe_social.api.analytics.fetch_post_analytics_now',
-            args: { post_name: frm.doc.name },
-            freeze: true,
-            freeze_message: __('Fetching analytics...'),
-            callback: function (r) {
-                if (r.message) {
-                    if (r.message.success) {
-                        frappe.show_alert({
-                            message: __('Analytics fetched for ') + Object.keys(r.message.results || {}).join(', '),
-                            indicator: 'green'
-                        });
-                        // Optionally navigate to analytics
-                        frappe.set_route('List', 'Social Post Analytics', {
-                            social_post: frm.doc.name
-                        });
-                    } else {
-                        frappe.show_alert({
-                            message: __('Failed to fetch analytics'),
-                            indicator: 'red'
-                        });
-                    }
-                }
-            }
-        });
-    },
-
+        frm.page.set_indicator(status, indicator);
+    }
 });
 
 let live_interval = null;
@@ -462,7 +378,7 @@ function start_live_character_count(frm) {
 
 // Stop interval when leaving form (good practice)
 $(document).on('form-unload', function (event, frm) {
-    if (frm.doctype === 'Social Post' && live_interval) {
+    if (frm.doctype === 'Post Ads' && live_interval) {
         clearInterval(live_interval);
     }
 });
@@ -545,6 +461,8 @@ function update_character_count(frm) {
 function apply_filters(frm) {
     filter_platform_field(frm);
     filter_account_field(frm);
+    filter_campaign_field(frm);
+    filter_ad_set_field(frm);
 }
 
 function filter_platform_field(frm) {
@@ -558,7 +476,7 @@ function filter_platform_field(frm) {
     }
 
     frappe.call({
-        method: "frappe_social.frappe_social.doctype.social_post.social_post.get_platforms_for_organization",
+        method: "frappe_social.ads_manager.doctype.post_ads.post_ads.get_platforms_for_organization",
         args: { organization: organization },
         callback: function (r) {
             let platforms = r.message || [];
@@ -586,13 +504,13 @@ function filter_account_field(frm) {
     const platform = frm.doc.platform;
 
     if (!organization || !platform) {
-        frm.set_query('account', () => ({ filters: { name: ["in", []] } }));
-        frm.set_value('account', '');
+        frm.set_query('select_ad_account', () => ({ filters: { name: ["in", []] } }));
+        frm.set_value('select_ad_account', '');
         update_account_details(frm);
         return;
     }
 
-    frm.set_query('account', () => ({
+    frm.set_query('select_ad_account', () => ({
         filters: {
             organization: organization,
             platform: platform,
@@ -604,11 +522,45 @@ function filter_account_field(frm) {
     update_account_details(frm);
 }
 
+function filter_campaign_field(frm) {
+    const select_ad_account = frm.doc.select_ad_account;
+
+    if (!select_ad_account) {
+        frm.set_query('campaign', () => ({ filters: { name: ["in", []] } }));
+        frm.set_value('campaign', '');
+        return;
+    }
+
+    frm.set_query('campaign', () => ({
+        filters: {
+            custom_select_facebook_ad_account: select_ad_account,
+            custom_is_meta_ads: 1
+        }
+    }));
+}
+
+// Add this new function for Ad Set
+function filter_ad_set_field(frm) {
+    const campaign = frm.doc.campaign;
+
+    if (!campaign) {
+        frm.set_query('select_ad_set', () => ({ filters: { name: ["in", []] } }));
+        frm.set_value('select_ad_set', '');
+        return;
+    }
+
+    frm.set_query('select_ad_set', () => ({
+        filters: {
+            campaign: campaign
+        }
+    }));
+}
+
 function update_account_details(frm) {
     const org = frm.doc.organization || "Not selected";
     const platform = frm.doc.platform || "Not selected";
-    const account = frm.doc.account;
-    const html_field = frm.get_field('html'); // CHANGE TO YOUR ACTUAL HTML FIELD NAME
+    const account = frm.doc.select_ad_account;
+    const html_field = frm.get_field('html');
 
     if (!html_field) return;
 
@@ -641,7 +593,7 @@ function update_account_details(frm) {
         } else {
             try {
                 // CORRECT client-side way to fetch a single doc
-                const response = await frappe.db.get_doc('Social Integration', account);
+                const response = await frappe.db.get_doc('Ads Account Integration', account);
                 const integration = response; // In newer versions it's direct, in older it's response.message
 
                 const profile_image = integration.profile_image || '';
@@ -745,7 +697,7 @@ function update_account_details(frm) {
     renderHTML();
 
     // Re-render when relevant fields change
-    ['organization', 'platform', 'account'].forEach(field => {
+    ['organization', 'platform', 'select_ad_account'].forEach(field => {
         frm.fields_dict[field]?.input?.addEventListener('change', renderHTML);
     });
 
@@ -756,134 +708,21 @@ function update_account_details(frm) {
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 }
 
-frappe.ui.form.on('Social Post Media', {
-    file: function (frm, cdt, cdn) {
-        let row = frappe.get_doc(cdt, cdn);
-
-
-        if (!frm.doc.file) return;
-
-        frappe.db.get_value(
-            'File',
-            { file_url: frm.doc.file },
-            ['file_size', 'file_type'],
-            (r) => {
-                if (r) {
-                    frm.set_value('file_size', r.file_size);
-                    frm.set_value('file_type', r.file_type);
+function fetch_and_set_facebook_page(frm) {
+    if (frm.doc.select_ad_set) {
+        frappe.call({
+            method: 'frappe.client.get',
+            args: {
+                doctype: 'Ad Set',
+                name: frm.doc.select_ad_set,
+                fields: ['select_facebook_page']
+            },
+            callback: (r) => {
+                if (r.message && r.message.select_facebook_page) {
+                    // Set the page from Ad Set
+                    frm.set_value('selected_facebook_page', r.message.select_facebook_page);
                 }
             }
-        );
-    }
-});
-
-let utm_build_timeout = null;
-
-function auto_build_utm(frm) {
-    // Clear any existing timeout
-    if (utm_build_timeout) {
-        clearTimeout(utm_build_timeout);
-    }
-
-    if (!frm.doc.link) {
-        return;
-    }
-
-    utm_build_timeout = setTimeout(() => {
-        auto_build_utm_url(frm);
-    }, 1000);
-}
-
-function auto_build_utm_url(frm) {
-    // Only auto-build if we have the necessary info
-    if (!frm.doc.link) {
-        return;
-    }
-
-    // Validate and fix URL format
-    let link = frm.doc.link.trim();
-    let url;
-
-    try {
-        // Try to parse the URL
-        url = new URL(link);
-    } catch (e) {
-        // If it fails, try adding https://
-        if (!link.startsWith('http://') && !link.startsWith('https://')) {
-            try {
-                // Add https:// for url_build, but DON'T update the link field
-                url = new URL('https://' + link);
-
-            } catch (e2) {
-
-                return;
-            }
-        } else {
-            return;
-        }
-
-        // Auto-fill UTM parameters
-        let utm_source = '';
-        let utm_medium = 'social';
-        let utm_campaign = '';
-        let utm_postname = '';
-
-        // Get utm_source from platform
-        if (frm.doc.platform) {
-            utm_source = frm.doc.platform.toLowerCase();
-        }
-
-        if (frm.doc.post_name) {
-            utm_postname = frm.doc.post_name.toLowerCase();
-        }
-
-        // Get utm_campaign from campaign field
-        if (frm.doc.campagin) {
-            frappe.db.get_value('Marketing Campaign', frm.doc.campagin, 'name', (r) => {
-                if (r && r.name) {
-                    utm_campaign = r.name.toLowerCase().replace(/\s+/g, '_');
-                    build_and_set_url(frm, url, utm_source, utm_medium, utm_campaign, utm_postname);
-                } else {
-                    build_and_set_url(frm, url, utm_source, utm_medium, utm_campaign, utm_postname);
-                }
-            });
-        } else {
-            build_and_set_url(frm, url, utm_source, utm_medium, utm_campaign, utm_postname);
-        }
-    }
-
-    // Build and set the URL
-    function build_and_set_url(frm, url, utm_source, utm_medium, utm_campaign, utm_postname) {
-        // Only build if we have at least source and medium
-        if (!utm_source || !utm_campaign) {
-            let missing = [];
-            if (!utm_source) missing.push('Platform');
-            if (!utm_campaign) missing.push('Campaign');
-
-            frappe.show_alert({
-                message: __('⚠️ Cannot build UTM URL. Missing: ') + missing.join(', '),
-                indicator: 'orange'
-            }, 5);
-            return;
-        }
-
-        // Add UTM parameters
-        if (utm_source) url.searchParams.set('utm_wsource', utm_source);
-        if (utm_medium) url.searchParams.set('utm_wmedium', utm_medium);
-        if (utm_campaign) url.searchParams.set('utm_wcampaign', utm_campaign);
-        if (utm_postname) url.searchParams.set('utm_wpostname', utm_postname);
-
-        const built_url = url.toString();
-
-        // Only update if it's different
-        if (frm.doc.url_build !== built_url) {
-            frm.set_value('url_build', built_url);
-
-            // Show detailed notification
-            let params_text = `${utm_source}/${utm_medium}`;
-            if (utm_campaign) params_text += `/${utm_campaign}`;
-            if (utm_postname) params_text += `/${utm_postname}`;
-
-        }
+        });
     }
 }

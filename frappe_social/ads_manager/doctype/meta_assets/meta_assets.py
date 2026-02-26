@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class FacebookPages(Document):
+class MetaAssets(Document):
 	pass

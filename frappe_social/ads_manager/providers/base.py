@@ -41,7 +41,13 @@ class TokenRefreshResult:
     refresh_token: Optional[str] = None
     expires_in: Optional[int] = None
     error_message: Optional[str] = None
-
+    
+@dataclass
+class AudienceResult:
+    success: bool
+    audience_id: Optional[str] = None
+    error_message: Optional[str] = None
+    raw_response: Optional[Dict] = None
 
 class BaseProvider(ABC):
     """

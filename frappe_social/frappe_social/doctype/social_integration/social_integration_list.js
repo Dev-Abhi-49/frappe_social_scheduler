@@ -1,6 +1,6 @@
 // List view customization for Social Integration
 frappe.listview_settings['Social Integration'] = {
-    add_fields: ['connection_status',],
+    add_fields: ['connection_status','enabled'],
 
     get_indicator: function (doc) {
         if (doc.connection_status === 'Connected') {
@@ -65,6 +65,7 @@ frappe.listview_settings['Social Integration'] = {
         listview.page.set_primary_action(__('Connect Account'), () => show_connect_dialog(), 'add');
     }
 };
+
 function show_connect_dialog() {
     let d = new frappe.ui.Dialog({
         title: __('Account Integration'),

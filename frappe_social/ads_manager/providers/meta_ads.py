@@ -13,6 +13,7 @@ from frappe_social.ads_manager.providers.base import (
     PublishResult,
     AnalyticsResult,
     TokenRefreshResult,
+    AudienceResult,
 )
 
 logger = logging.getLogger(__name__)
@@ -68,7 +69,12 @@ class MetaAdsProvider(BaseProvider):
         for attempt in range(MAX_RETRIES):
             try:
                 # Log request details for debugging
-                if json_data and method.upper() == "POST":
+                if method.upper() == "GET":
+                    request_params = {**(params or {}), "access_token": "***HIDDEN***"}
+                    if "insights" in endpoint:
+                        logger.info(f"GET {endpoint}")
+                        logger.info(f"Parameters: {json.dumps(request_params, indent=2, default=str)}")
+                elif json_data and method.upper() == "POST":
                     logger.debug(f"Sending POST request to {endpoint}")
                     logger.debug(f"Payload size: {len(json.dumps(json_data))} bytes")
                     
@@ -79,6 +85,15 @@ class MetaAdsProvider(BaseProvider):
                 response = requests.request(method.upper(), url, **kwargs)
                 response.raise_for_status()
                 data = response.json()
+                
+                # Log response details for insights
+                if "insights" in endpoint:
+                    logger.info(f"Response status: {response.status_code}")
+                    logger.info(f"Response keys: {list(data.keys()) if isinstance(data, dict) else type(data)}")
+                    if isinstance(data, dict) and "data" in data:
+                        logger.info(f"Data array length: {len(data.get('data', []))}")
+                        if data.get("data"):
+                            logger.info(f"First data item keys: {list(data['data'][0].keys())}")
 
                 if "error" in data:
                     error = data["error"]
@@ -474,16 +489,290 @@ class MetaAdsProvider(BaseProvider):
             
             return PublishResult(success=False, error_message=error_msg)
         
+    def create_audience(self, payload: dict) -> AudienceResult:
+        url = f"{self.base_url}/{self.account_id}/customaudiences"
+        response = requests.post(
+            url,
+            params={"access_token": self.access_token},
+            json=payload
+        )
+        data = response.json()
+        if "error" in data:
+            return AudienceResult(success=False, error_message=data["error"]["message"])
+        return AudienceResult(success=True, audience_id=data["id"])
+
+
+    def add_users_to_audience(self, audience_id: str, schema: list, hashed_data: list) -> dict:
+        url = f"{self.base_url}/{audience_id}/users"
+        payload = {"payload": {"schema": schema, "data": hashed_data}}
+        response = requests.post(
+            url,
+            params={"access_token": self.access_token},
+            json=payload
+        )
+        return response.json()
     # Required abstract methods (minimal implementations)
     def fetch_account_analytics(self) -> AnalyticsResult:
         try:
+            # Fetch account-level analytics from last 7 days
+            # Only use valid fields from Meta API
+            fields = ",".join([
+                "spend",
+                "impressions",
+                "clicks",
+                "ctr",
+                "cpc",
+                "reach",
+                "frequency",
+                "actions",
+                "conversions",
+                "purchase_roas",
+                "cost_per_purchase"
+            ])
+            
+            # Use date_preset instead of time_range - simpler and more reliable
+            params = {
+                "fields": fields,
+                "date_preset": "last_7d"  # Meta API will aggregate last 7 days
+            }
+            
+            logger.info(f"Fetching insights for account {self.account_id}")
+            logger.info(f"Parameters: {params}")
+            
             data = self._make_request(
                 "GET",
                 f"{self.account_id}/insights",
-                params={"date_preset": "last_7d", "fields": "impressions,spend"},
+                params=params,
             )
-            return AnalyticsResult(success=True, metrics=data.get("data", []))
+            
+            logger.info(f"Raw API Response: {json.dumps(data, indent=2, default=str)}")
+            logger.info(f"Response type: {type(data)}")
+            logger.info(f"Response keys: {list(data.keys()) if isinstance(data, dict) else 'not a dict'}")
+            
+            # Handle the response structure
+            if not isinstance(data, dict):
+                logger.error(f"Response is not a dict, got {type(data)}: {str(data)[:200]}")
+                return AnalyticsResult(success=False, error_message=f"Meta API returned unexpected type: {type(data)}")
+            
+            # Check for API errors
+            if "error" in data:
+                error_detail = data.get("error", {})
+                if isinstance(error_detail, dict):
+                    error_msg = error_detail.get("message", str(error_detail))
+                else:
+                    error_msg = str(error_detail)
+                logger.error(f"Meta API Error: {error_msg}")
+                return AnalyticsResult(success=False, error_message=f"Meta API returned error: {error_msg}")
+            
+            # Verify data array exists
+            if "data" not in data:
+                logger.error(f"Response missing 'data' key. Keys: {list(data.keys())}")
+                return AnalyticsResult(
+                    success=False, 
+                    error_message=f"Invalid response format from Meta API. Expected 'data' array. Got: {list(data.keys())}"
+                )
+            
+            data_array = data.get("data", [])
+            
+            # Check if data array is empty
+            if not isinstance(data_array, list):
+                logger.error(f"Data is not a list, got {type(data_array)}: {data_array}")
+                return AnalyticsResult(success=False, error_message="Meta API returned invalid data structure")
+            
+            if len(data_array) == 0:
+                logger.warning("Data array is empty - account may have no activity in last 7 days")
+                return AnalyticsResult(
+                    success=False, 
+                    error_message="No analytics data found for the last 7 days. This account may not have any activity."
+                )
+            
+            logger.info(f"Data array has {len(data_array)} items")
+            
+            # Aggregate metrics from all days (Meta might return multiple daily breakdowns)
+            metrics = {
+                "spend": 0.0,
+                "impressions": 0,
+                "clicks": 0,
+                "ctr": 0.0,
+                "cpc": 0.0,
+                "reach": 0,
+                "frequency": 0.0,
+                "actions": 0,
+                "conversions": 0,
+                "cpc": 0.0,
+                "action_rate": 0.0,
+                "cost_per_action": 0.0,
+                "conversion_rate": 0.0,
+                "purchase_roas": 0.0,
+                "cost_per_purchase": 0.0
+            }
+            
+            # Helper function to safely convert string values from API
+            def safe_int(val):
+                """Convert API values to int, handling strings, dicts, lists, and None"""
+                if val is None or val == "":
+                    return 0
+                
+                # Handle dict with "value" key (Meta's action breakdown format)
+                if isinstance(val, dict):
+                    if "value" in val:
+                        return safe_int(val["value"])  # Recursive call
+                    logger.warning(f"Dict without 'value' key: {val}")
+                    return 0
+                
+                # Handle list of dicts (Meta's breakdowns format)
+                if isinstance(val, list):
+                    if len(val) == 0:
+                        return 0
+                    # If list of dicts, sum their values
+                    if isinstance(val[0], dict):
+                        total = 0
+                        for item in val:
+                            if "value" in item:
+                                total += safe_int(item["value"])
+                        return total
+                    # If list of strings/numbers, sum them
+                    return sum(safe_int(v) for v in val)
+                
+                # Handle string numbers
+                if isinstance(val, str):
+                    try:
+                        return int(val)
+                    except (ValueError, TypeError):
+                        logger.warning(f"Could not convert string to int: {val}")
+                        return 0
+                
+                # Handle numeric types
+                try:
+                    return int(val) if val else 0
+                except (ValueError, TypeError):
+                    logger.warning(f"Could not convert value to int: {val} (type: {type(val)})")
+                    return 0
+            
+            def safe_float(val):
+                """Convert API values to float, handling strings, dicts, lists, and None"""
+                if val is None or val == "":
+                    return 0.0
+                
+                # Handle dict with "value" key
+                if isinstance(val, dict):
+                    if "value" in val:
+                        return safe_float(val["value"])  # Recursive call
+                    logger.warning(f"Dict without 'value' key: {val}")
+                    return 0.0
+                
+                # Handle list of dicts
+                if isinstance(val, list):
+                    if len(val) == 0:
+                        return 0.0
+                    # If list of dicts, sum their values
+                    if isinstance(val[0], dict):
+                        total = 0.0
+                        for item in val:
+                            if "value" in item:
+                                total += safe_float(item["value"])
+                        return total
+                    # If list of strings/numbers, sum them
+                    return sum(safe_float(v) for v in val)
+                
+                # Handle string numbers
+                if isinstance(val, str):
+                    try:
+                        return float(val)
+                    except (ValueError, TypeError):
+                        logger.warning(f"Could not convert string to float: {val}")
+                        return 0.0
+                
+                # Handle numeric types
+                try:
+                    return float(val) if val else 0.0
+                except (ValueError, TypeError):
+                    logger.warning(f"Could not convert value to float: {val} (type: {type(val)})")
+                    return 0.0
+            
+            for item in data_array:
+                logger.debug(f"Processing item: {json.dumps(item, indent=2, default=str)}")
+                
+                metrics["spend"] += safe_float(item.get("spend"))
+                metrics["impressions"] += safe_int(item.get("impressions"))
+                metrics["clicks"] += safe_int(item.get("clicks"))
+                metrics["reach"] += safe_int(item.get("reach"))
+                metrics["actions"] += safe_int(item.get("actions"))
+                metrics["conversions"] += safe_int(item.get("conversions"))
+            
+            logger.info(f"Aggregated metrics - Spend: {metrics['spend']}, Impressions: {metrics['impressions']}, Clicks: {metrics['clicks']}")
+            
+            # Calculate derived metrics
+            if metrics["impressions"] > 0:
+                metrics["ctr"] = round((metrics["clicks"] / metrics["impressions"]) * 100, 2)
+            
+            if metrics["clicks"] > 0:
+                metrics["cpc"] = round(metrics["spend"] / metrics["clicks"], 2)
+            
+            if metrics["actions"] > 0:
+                metrics["cost_per_action"] = round(metrics["spend"] / metrics["actions"], 2)
+                metrics["action_rate"] = round((metrics["actions"] / metrics["impressions"]) * 100, 2) if metrics["impressions"] > 0 else 0
+            
+            if metrics["conversions"] > 0:
+                metrics["cost_per_purchase"] = round(metrics["spend"] / metrics["conversions"], 2)
+                metrics["conversion_rate"] = round((metrics["conversions"] / metrics["clicks"]) * 100, 2) if metrics["clicks"] > 0 else 0
+            
+            # Get frequency and ROAS from latest data (last item)
+            latest_data = data_array[-1] if data_array else {}
+            metrics["frequency"] = safe_float(latest_data.get("frequency"))
+            metrics["purchase_roas"] = safe_float(latest_data.get("purchase_roas"))
+            
+            # Fetch campaign counts (with error handling - these are optional)
+            try:
+                campaigns_data = self._make_request(
+                    "GET",
+                    f"{self.account_id}/campaigns",
+                    params={"fields": "id,status", "limit": 1}
+                )
+                
+                total_campaigns = campaigns_data.get("paging", {}).get("cursors", {}).get("total_count", 0)
+                active_campaigns = len([c for c in campaigns_data.get("data", []) if c.get("status") == "ACTIVE"])
+                
+                metrics["active_campaigns"] = active_campaigns
+                metrics["total_campaigns"] = total_campaigns
+                logger.info(f"Campaigns: {active_campaigns} active, {total_campaigns} total")
+            except Exception as e:
+                logger.warning(f"Could not fetch campaign counts: {str(e)}")
+                metrics["active_campaigns"] = 0
+                metrics["total_campaigns"] = 0
+            
+            # Fetch adsets count (optional)
+            try:
+                adsets_data = self._make_request(
+                    "GET",
+                    f"{self.account_id}/adsets",
+                    params={"fields": "id", "limit": 1}
+                )
+                metrics["adsets_count"] = adsets_data.get("paging", {}).get("cursors", {}).get("total_count", 0)
+                logger.info(f"Ad Sets count: {metrics['adsets_count']}")
+            except Exception as e:
+                logger.warning(f"Could not fetch ad sets count: {str(e)}")
+                metrics["adsets_count"] = 0
+            
+            # Fetch ads count (optional)
+            try:
+                ads_data = self._make_request(
+                    "GET",
+                    f"{self.account_id}/ads",
+                    params={"fields": "id", "limit": 1}
+                )
+                metrics["ads_count"] = ads_data.get("paging", {}).get("cursors", {}).get("total_count", 0)
+                logger.info(f"Ads count: {metrics['ads_count']}")
+            except Exception as e:
+                logger.warning(f"Could not fetch ads count: {str(e)}")
+                metrics["ads_count"] = 0
+            
+            logger.info(f"Analytics fetch completed. Final metrics: {json.dumps({k: v for k, v in metrics.items() if k in ['spend', 'impressions', 'clicks', 'reach', 'frequency']}, default=str)}")
+            return AnalyticsResult(success=True, metrics=metrics)
         except Exception as e:
+            logger.error(f"Error fetching account analytics: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
             return AnalyticsResult(success=False, error_message=str(e))
 
     def fetch_post_analytics(self, campaign_id: str) -> AnalyticsResult:

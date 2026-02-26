@@ -123,10 +123,18 @@ def _get_auth_url(platform: str, settings, redirect_uri: str, state: str) -> str
 
 
     elif platform == "YouTube":
+        scopes = " ".join([
+            "https://www.googleapis.com/auth/userinfo.profile",
+            "https://www.googleapis.com/auth/userinfo.email",
+            "https://www.googleapis.com/auth/youtube.upload",
+            "https://www.googleapis.com/auth/youtube.readonly",
+            # "https://www.googleapis.com/auth/youtube",
+            # "https://www.googleapis.com/auth/youtube.force-ssl",
+        ])
         params = {
             "client_id": settings.youtube_client_id,
             "redirect_uri": redirect_uri,
-            "scope": "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/youtubepartner https://www.googleapis.com/auth/youtube.force-ssl",
+            "scope": scopes,
             "state": state,
             "response_type": "code",
             "access_type": "offline",

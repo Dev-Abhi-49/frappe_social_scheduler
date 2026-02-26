@@ -6,16 +6,51 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "basic_info_section",
   "enable_ad_set",
+  "basic_info_section",
   "ad_set_name",
-  "adset_id",
-  "column_break_xlfk",
   "campaign",
+  "column_break_xlfk",
+  "ad_account",
   "effective_status",
-  "select_facebook_page",
-  "optimization_section",
+  "section_break_terz",
   "performance_goal",
+  "column_break_ecyo",
+  "select_facebook_page",
+  "section_break_mxil",
+  "cost_per_result_goal",
+  "max_frequency",
+  "column_break_ilfu",
+  "frequency_control",
+  "frequency_interval_days",
+  "html_ioce",
+  "section_break_ysmd",
+  "delivery_type",
+  "section_break_ppel",
+  "ad_sequencing",
+  "column_break_skun",
+  "dynamic_creative",
+  "section_break_aixe",
+  "budget_type_dailylifetime",
+  "column_break_zfiq",
+  "amount",
+  "section_break_amav",
+  "start_date_and_time",
+  "column_break_yutz",
+  "end_date_and_time",
+  "section_break_zjpr",
+  "budget_scheduling",
+  "time_period_for_budget_increase",
+  "target_section",
+  "geo_location",
+  "gender",
+  "link_cqgt",
+  "column_break_dlmy",
+  "age_min",
+  "age_max",
+  "policy_and_regulatory_requirements_section",
+  "check_mrux",
+  "optimization_section",
   "multi_optimization_goal_weight",
   "column_break_qwos",
   "optimization_sub_event",
@@ -40,12 +75,6 @@
   "bid_amount",
   "column_break_terp",
   "billing_event",
-  "target_section",
-  "geo_location",
-  "gender",
-  "column_break_dlmy",
-  "age_min",
-  "age_max",
   "scheduling_section",
   "start_time",
   "created_time",
@@ -64,7 +93,9 @@
   "messenger",
   "audience_network",
   "whatsapp",
-  "threads"
+  "threads",
+  "section_break_xnpp",
+  "adset_id"
  ],
  "fields": [
   {
@@ -92,7 +123,7 @@
   {
    "fieldname": "campaign",
    "fieldtype": "Link",
-   "label": "Campaign",
+   "label": "Select Campaign",
    "options": "Marketing Campaign"
   },
   {
@@ -182,7 +213,7 @@
    "label": "Recurring Budget Semantics"
   },
   {
-   "default": "1",
+   "default": "0",
    "fieldname": "enable_ad_set",
    "fieldtype": "Check",
    "label": "Enable Ad Set"
@@ -207,16 +238,19 @@
   {
    "fieldname": "budget_section",
    "fieldtype": "Section Break",
+   "hidden": 1,
    "label": "Budget"
   },
   {
    "fieldname": "bidding_section",
    "fieldtype": "Section Break",
+   "hidden": 1,
    "label": "Bidding"
   },
   {
    "fieldname": "optimization_section",
    "fieldtype": "Section Break",
+   "hidden": 1,
    "label": "Optimization"
   },
   {
@@ -327,6 +361,7 @@
    "collapsible": 1,
    "fieldname": "placement_section",
    "fieldtype": "Section Break",
+   "hidden": 1,
    "label": "Placement"
   },
   {
@@ -396,19 +431,175 @@
   {
    "fieldname": "select_facebook_page",
    "fieldtype": "Select",
+   "hidden": 1,
    "label": "Select Facebook Page"
   },
   {
    "collapsible": 1,
    "fieldname": "scheduling_section",
    "fieldtype": "Section Break",
+   "hidden": 1,
    "label": "Scheduling"
+  },
+  {
+   "fieldname": "section_break_xnpp",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "section_break_terz",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_ecyo",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_mxil",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "100",
+   "fieldname": "cost_per_result_goal",
+   "fieldtype": "Currency",
+   "label": "Cost per result goal"
+  },
+  {
+   "default": "Cap",
+   "fieldname": "frequency_control",
+   "fieldtype": "Select",
+   "label": "Frequency Control",
+   "options": "\nTarget\nCap"
+  },
+  {
+   "fieldname": "column_break_ilfu",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "html_ioce",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "section_break_ysmd",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "delivery_type",
+   "fieldtype": "Select",
+   "label": "Delivery type",
+   "options": "\nStandard"
+  },
+  {
+   "fieldname": "section_break_ppel",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "ad_sequencing",
+   "fieldtype": "Check",
+   "label": "Ad sequencing"
+  },
+  {
+   "default": "0",
+   "fieldname": "dynamic_creative",
+   "fieldtype": "Check",
+   "label": "Dynamic creative"
+  },
+  {
+   "fieldname": "column_break_skun",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_aixe",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "budget_type_dailylifetime",
+   "fieldtype": "Select",
+   "label": "Budget Type (Daily/Lifetime)",
+   "options": "Daily Budget\nLifetime Budget"
+  },
+  {
+   "fieldname": "column_break_zfiq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "label": "Amount"
+  },
+  {
+   "fieldname": "section_break_amav",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "start_date_and_time",
+   "fieldtype": "Datetime",
+   "label": "Start Date and Time"
+  },
+  {
+   "fieldname": "column_break_yutz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "end_date_and_time",
+   "fieldtype": "Datetime",
+   "label": "End Date and Time"
+  },
+  {
+   "fieldname": "section_break_zjpr",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "budget_scheduling",
+   "fieldtype": "Check",
+   "label": "Budget scheduling"
+  },
+  {
+   "depends_on": "eval:doc.budget_scheduling == 1",
+   "fieldname": "time_period_for_budget_increase",
+   "fieldtype": "Table",
+   "label": "Time period for budget increase",
+   "options": "Time Period for Budget"
+  },
+  {
+   "fieldname": "link_cqgt",
+   "fieldtype": "Link",
+   "options": "Language"
+  },
+  {
+   "fieldname": "policy_and_regulatory_requirements_section",
+   "fieldtype": "Section Break",
+   "label": "Policy and regulatory requirements"
+  },
+  {
+   "default": "0",
+   "fieldname": "check_mrux",
+   "fieldtype": "Check",
+   "label": "This ad set includes ads related to securities and investments"
+  },
+  {
+   "fieldname": "max_frequency",
+   "fieldtype": "Int",
+   "label": "Max Frequency"
+  },
+  {
+   "default": "7",
+   "fieldname": "frequency_interval_days",
+   "fieldtype": "Int",
+   "label": "Frequency Interval (Days)"
+  },
+  {
+   "fieldname": "ad_account",
+   "fieldtype": "Link",
+   "label": "Select Ad Account",
+   "options": "Ads Account Integration"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-04 14:57:46.611415",
+ "modified": "2026-02-25 09:21:14.723182",
  "modified_by": "Administrator",
  "module": "Ads Manager",
  "name": "Ad Set",

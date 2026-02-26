@@ -16,34 +16,44 @@ frappe.listview_settings['Ads Account Integration'] = {
         }
     },
 
-    onload(listview) {
+    onload: function (listview) {
+        // Handle successful OAuth from "Connect Account"
+        const urlParams = new URLSearchParams(window.location.search);
+        const oauthSuccess = urlParams.get('oauth_success');
+
+        if (oauthSuccess) {
+            frappe.show_alert({
+                message: __('Account connected successfully'),
+                indicator: 'green'
+            }, 5);
+
+            listview.refresh();
+
+            // Clean URL
+            window.history.replaceState({}, document.title, '/app/social-integration');
+        }
+
+        // Remove default + Add button
         listview.page.clear_primary_action();
 
+        // Connect button
         listview.page.set_primary_action(__('Connect Account'), () => show_connect_dialog(), 'add');
 
-        listview.page.add_action_item(__('Disconnect Selected'), () => {
+        // Bulk disconnect
+        listview.page.add_action_item(__('Disconnect Selected'), function () {
             const selected = listview.get_checked_items();
-            if (!selected.length) {
-                frappe.msgprint(__('Please select at least one account'));
+            if (selected.length === 0) {
+                frappe.msgprint(__('Please select accounts to disconnect'));
                 return;
             }
-
             frappe.confirm(
-                __('Disconnect {0} selected account(s)?', [selected.length]),
-                () => {
-                    selected.forEach(row => {
+                __('Disconnect {0} account(s)?', [selected.length]),
+                function () {
+                    selected.forEach(function (doc) {
                         frappe.call({
-                            method: 'frappe.client.set_value',
-                            args: {
-                                doctype: 'Ads Account Integration',
-                                name: row.name,
-                                fieldname: {
-                                    connection_status: 'Not Connected',
-                                    access_token: null,
-                                    refresh_token: null,
-                                    token_expiry: null
-                                }
-                            }
+                            method: 'frappe_social.frappe_social.api.oauth.disconnect',
+                            args: { integration: doc.name },
+                            async: false
                         });
                     });
                     listview.refresh();
@@ -62,41 +72,85 @@ frappe.listview_settings['Ads Account Integration'] = {
     }
 };
 
-
-// =======================
-// OAuth Dialog
-// =======================
-
 function show_connect_dialog() {
     const d = new frappe.ui.Dialog({
         title: __('Connect New Ads Account'),
         fields: [
             {
-                fieldname: 'platform',
-                fieldtype: 'Select',
-                label: __('Platform'),
-                options: ['Facebook', 'Instagram'],
-                default: 'Facebook',
-                reqd: 1
-            },
-            {
                 fieldname: 'account_name',
                 fieldtype: 'Data',
                 label: __('Account Name'),
-                reqd: 1
+                reqd: 1,
+                placeholder: __('Enter Account Name')
             },
             {
                 fieldname: 'account_description',
                 fieldtype: 'Small Text',
-                label: __('Description')
+                label: __('Account Description'),
+                placeholder: __('Enter Account Description (optional)')
+            },
+            {
+                fieldname: 'platform',
+                fieldtype: 'Select',
+                label: __('Platform'),
+                options: '\nMeta\nGoogle\nMicrosoft',
+                reqd: 1,
+                placeholder: __('Select Platform')
             },
             {
                 fieldname: 'organization',
                 fieldtype: 'Link',
                 label: __('Organization'),
-                options: 'CRM Organization'
+                options: 'CRM Organization',
+                placeholder: __('Select Organization')
+            },
+            {
+                fieldname: 'info_section',
+                fieldtype: 'Section Break'
+            },
+            {
+                fieldname: "note",
+                fieldtype: "HTML",
+                options: `
+                    <div class="alert alert-info" style="margin-bottom: 0;">
+                        <p><strong>💡 Tip:</strong> Give your account a specific name (e.g., "Facebook - Bangalore Region") so it's easy to identify. Use the description to guide your team on when to select this account (e.g., "For all posts related to Mysore branch" or "Use for academia-related content only").</p>
+
+                        <details style="margin: 10px 0;">
+                            <summary style="cursor: pointer; color: #0d6efd; font-weight: 600;">
+                                <strong>Learn more</strong>
+                            </summary>
+
+                            <div style="margin-top: 12px; padding-left: 10px; border-left: 3px solid #0d6efd;">
+                                <p><strong>Naming your account:</strong> Choose a clear, descriptive name that helps your team quickly identify the account's purpose or target audience.</p>
+                                <p><strong>Examples:</strong></p>
+                                <ul>
+                                    <li>Facebook - Bangalore Region</li>
+                                    <li>Instagram - Corporate Updates</li>
+                                </ul>
+
+                                <p><strong>Adding a description:</strong> Provide instructions to help your team decide when to use this account for posting.</p>
+                                <p><strong>Examples:</strong></p>
+                                <ul>
+                                    <li>"Use for all posts related to Mysore branch events and announcements"</li>
+                                    <li>"Dedicated to academic content, research updates, and university partnerships"</li>
+                                    <li>"For customer testimonials and product reviews only"</li>
+                                </ul>
+                            </div>
+                        </details>
+
+                        <p><strong>Before connecting:</strong></p>
+                        <ul style="margin-bottom: 0; padding-left: 20px;">
+                            <li><strong>Facebook/Instagram:</strong> You need a Facebook Page</li>
+                            <li><strong>Instagram:</strong> Must be a Business or Creator account and should be connected to a Facebook Page</li>
+                            <li><strong>Twitter:</strong> You need a Twitter account </li>
+                            <li><strong>LinkedIn:</strong> Company Page required</li>
+                            <li><strong>YouTube:</strong> YouTube channel required</li>
+                        </ul>
+                    </div>
+                `
             }
         ],
+        size: 'large',
         primary_action_label: __('Connect'),
         primary_action: function (values) {
             d.hide();
@@ -111,11 +165,6 @@ function show_connect_dialog() {
 
     d.show();
 }
-
-
-// =======================
-// OAuth Start
-// =======================
 
 function connect_platform(data) {
     frappe.call({

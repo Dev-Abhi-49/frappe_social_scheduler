@@ -8,8 +8,14 @@
  "field_order": [
   "section_break_vflk",
   "page_name",
+  "username",
+  "column_break_znla",
   "page_id",
-  "page_access_token"
+  "platform",
+  "section_break_bvxj",
+  "page_access_token",
+  "image_uaou",
+  "profile_picture_url"
  ],
  "fields": [
   {
@@ -30,18 +36,50 @@
   },
   {
    "fieldname": "page_access_token",
-   "fieldtype": "Text",
-   "label": "Page Access Token"
+   "fieldtype": "Password",
+   "label": "Page Access Token",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_znla",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_bvxj",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "image_uaou",
+   "fieldtype": "Attach Image",
+   "read_only": 1
+  },
+  {
+   "fieldname": "profile_picture_url",
+   "fieldtype": "Long Text",
+   "label": "Profile Picture URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "platform",
+   "fieldtype": "Select",
+   "label": "Platform",
+   "options": "Facebook\nInstagram\nThreads\nWhatsApp",
+   "read_only": 1
+  },
+  {
+   "fieldname": "username",
+   "fieldtype": "Data",
+   "label": "Username"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-02-04 22:50:16.109016",
+ "modified": "2026-02-23 11:42:23.011552",
  "modified_by": "Administrator",
  "module": "Ads Manager",
- "name": "Facebook Pages",
+ "name": "Meta Assets",
  "naming_rule": "Random",
  "owner": "Administrator",
  "permissions": [],

@@ -376,32 +376,32 @@ class SocialPost(Document):
                 frappe.throw(_("YouTube Shorts must be at least 1 second long"))
             
             # Validate aspect ratio (must be vertical 9:16 or square 1:1)
-            width, height = get_video_dimensions(full_path)
+            # width, height = get_video_dimensions(full_path)
             
-            if height < width:
-                frappe.throw(_("YouTube Shorts must be vertical (9:16) or square (1:1). Got {0}x{1} (horizontal)").format(
-                    width, height
-                ))
+            # if height < width:
+            #     frappe.throw(_("YouTube Shorts must be vertical (9:16) or square (1:1). Got {0}x{1} (horizontal)").format(
+            #         width, height
+            #     ))
             
-            # Check minimum resolution (720p height minimum)
-            if height < 720:
-                frappe.throw(_("YouTube Shorts require minimum 720p vertical resolution. Got {0}x{1}").format(
-                    width, height
-                ))
+            # # Check minimum resolution (720p height minimum)
+            # if height < 720:
+            #     frappe.throw(_("YouTube Shorts require minimum 720p vertical resolution. Got {0}x{1}").format(
+            #         width, height
+            #     ))
             
-            # Calculate and validate aspect ratio
-            aspect_ratio = height / width if width > 0 else 0
+            # # Calculate and validate aspect ratio
+            # aspect_ratio = height / width if width > 0 else 0
             
-            # Allow 9:16 (1.778) or 1:1 (1.0) with some tolerance
-            is_vertical = aspect_ratio >= 1.5  # 9:16 is ~1.778
-            is_square = 0.95 <= aspect_ratio <= 1.05  # 1:1 with 5% tolerance
+            # # Allow 9:16 (1.778) or 1:1 (1.0) with some tolerance
+            # is_vertical = aspect_ratio >= 1.5  # 9:16 is ~1.778
+            # is_square = 0.95 <= aspect_ratio <= 1.05  # 1:1 with 5% tolerance
             
-            if not (is_vertical or is_square):
-                frappe.throw(_("YouTube Shorts must be vertical (9:16 aspect ratio) or square (1:1). Got {0:.2f}:1").format(
-                    aspect_ratio
-                ))
+            # if not (is_vertical or is_square):
+            #     frappe.throw(_("YouTube Shorts must be vertical (9:16 aspect ratio) or square (1:1). Got {0:.2f}:1").format(
+            #         aspect_ratio
+            #     ))
             
-            # Title is required
+            # # Title is required
             if not self.video_title:
                 frappe.throw(_("YouTube Shorts require a title"))
             
@@ -416,7 +416,21 @@ class SocialPost(Document):
                 frappe.throw(_("YouTube description must be 5000 characters or less (got {0})").format(
                     len(self.content)
                 ))
-            
+                
+            if self.thumbnail:
+                # Thumbnail validation will be handled by the provider
+                # Just check if file exists
+                thumbnail_path = frappe.get_site_path(self.thumbnail.lstrip("/"))
+                if not os.path.exists(thumbnail_path):
+                    frappe.throw(_("Thumbnail file not found: {0}").format(self.thumbnail))
+                
+                # Check thumbnail size (2MB max for YouTube)
+                thumbnail_size = os.path.getsize(thumbnail_path)
+                max_thumbnail_size = 2 * 1024 * 1024  # 2MB
+                if thumbnail_size > max_thumbnail_size:
+                    size_mb = thumbnail_size / (1024 * 1024)
+                    frappe.throw(_("YouTube thumbnail must be under 2 MB (got {0:.2f} MB)").format(size_mb))
+                        
             # Note: #Shorts tag will be automatically added by the provider
             return
         

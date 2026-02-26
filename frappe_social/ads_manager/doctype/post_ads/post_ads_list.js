@@ -1,4 +1,4 @@
-frappe.listview_settings['Social Post'] = {
+frappe.listview_settings['Post Ads'] = {
     add_fields: ['status'],
 
     get_indicator: function (doc) {
@@ -23,7 +23,7 @@ frappe.listview_settings['Social Post'] = {
         listview.page.clear_primary_action();
         listview.page.set_primary_action(
             __('Schedule Post'),
-            () => frappe.new_doc('Social Post'),
+            () => frappe.new_doc('Post Ads'),
             'add'
         );
 
@@ -44,7 +44,7 @@ frappe.listview_settings['Social Post'] = {
         listview.page.clear_primary_action();
         listview.page.set_primary_action(
             __('Schedule Post'),
-            () => frappe.new_doc('Social Post'),
+            () => frappe.new_doc('Post Ads'),
             'add'
         );
     }

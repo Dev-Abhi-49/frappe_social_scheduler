@@ -11,7 +11,7 @@
   "column_break_main",
   "enabled",
   "platform",
-  "organisation",
+  "organization",
   "connection_status",
   "profile_image",
   "profile_section",
@@ -31,7 +31,7 @@
   "authorized_user_email",
   "authorization_date",
   "section_break_wkub",
-  "fb_pages",
+  "meta_assets",
   "instagram_configuration_section",
   "instagram_business_account_id",
   "instagram_username",
@@ -43,8 +43,8 @@
   "token_expiry",
   "oauth_10a_token",
   "column_break_oauth",
-  "refresh_token",
   "page_access_token",
+  "refresh_token",
   "oauth_10a_secret",
   "sync_settings_section",
   "auto_sync",
@@ -79,7 +79,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Platform",
-   "options": "Facebook\nInstagram",
+   "options": "Meta\nGoogle\nMicrosoft",
    "read_only": 1,
    "reqd": 1
   },
@@ -215,7 +215,7 @@
   },
   {
    "fieldname": "access_token",
-   "fieldtype": "Text",
+   "fieldtype": "Password",
    "label": "Access Token"
   },
   {
@@ -236,7 +236,7 @@
   },
   {
    "fieldname": "page_access_token",
-   "fieldtype": "Text",
+   "fieldtype": "Password",
    "label": "Page Access Token",
    "read_only": 1
   },
@@ -296,14 +296,6 @@
    "read_only": 1
   },
   {
-   "fieldname": "organisation",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Organisation",
-   "options": "CRM Organization"
-  },
-  {
    "default": "Not Connected",
    "fieldname": "connection_status",
    "fieldtype": "Select",
@@ -313,15 +305,10 @@
    "read_only": 1
   },
   {
+   "collapsible": 1,
    "fieldname": "section_break_wkub",
    "fieldtype": "Section Break",
-   "label": "Facebook Pages"
-  },
-  {
-   "fieldname": "fb_pages",
-   "fieldtype": "Table",
-   "options": "Facebook Pages",
-   "read_only": 1
+   "label": "Meta Assets"
   },
   {
    "fieldname": "profile_image",
@@ -343,26 +330,41 @@
   {
    "fieldname": "ad_account_id",
    "fieldtype": "Data",
-   "label": "Ads Account ID",
+   "label": "Ad Account ID",
    "read_only": 1
   },
   {
    "fieldname": "ad_id",
    "fieldtype": "Data",
-   "label": "Ads ID",
+   "label": "Ad ID",
    "read_only": 1
   },
   {
    "fieldname": "ads_account_name",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Ads Account Name"
+   "label": "Ad Account Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "organization",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Organization",
+   "options": "CRM Organization"
+  },
+  {
+   "fieldname": "meta_assets",
+   "fieldtype": "Table",
+   "options": "Meta Assets",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-04 22:50:02.288065",
+ "modified": "2026-02-23 13:29:58.468838",
  "modified_by": "Administrator",
  "module": "Ads Manager",
  "name": "Ads Account Integration",
@@ -390,6 +392,18 @@
    "read": 1,
    "report": 1,
    "role": "Scheduler",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Scheduler Admin",
    "share": 1,
    "write": 1
   }
