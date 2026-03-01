@@ -1,532 +1,730 @@
-# # Copyright (c) 2026, Abhishek and contributors
-# # For license information, please see license.txt
-
-# import frappe
-# import logging
-# from frappe import _
-# from frappe_social.ads_manager.providers.meta_ads import MetaAdsProvider
-
-# logger = logging.getLogger(__name__)
-
-
-# def marketing_campaign_before_save(doc, method=None):
-#     """
-#     Hook handler for Marketing Campaign before_save event
-#     Called via hooks.py
-#     """
-#     # Only create if new, Meta Ads checked, and no existing ID
-#     if doc.is_new() and getattr(doc, "custom_is_meta_ads", False) and not getattr(doc, "custom_facebook_campaign_id", None):
-#         create_meta_campaign(doc)
-
-
-# def create_meta_campaign(doc):
-#     """
-#     Create campaign via Meta Ads provider and store the campaign_id
-#     """
-#     try:
-#         # Basic validations (including Meta Ads check for safety)
-#         if not getattr(doc, "custom_is_meta_ads", False):
-#             return  # Skip silently if not Meta Ads
-
-#         # if not getattr(doc, "custom_select_facebook", None):
-#         #     frappe.throw(_("Select Facebook Ad Account is required"))
-#         if not getattr(doc, "custom_select_facebook_ad_account", None):
-#             frappe.throw(_("Select Ad Account is required"))
-#         if not getattr(doc, "custom_campaign_objective", None):
-#             frappe.throw(_("Campaign Objective is required"))
-        
-#         # Initialize provider
-#         provider = MetaAdsProvider(doc.custom_select_facebook_ad_account)
-#         # provider.account_id = ad_account_id  # Set ad_account_id on provider
-
-#         # Build payload
-#         payload = build_campaign_payload(doc)
-
-#         logger.info(f"Creating campaign '{doc.custom_campaign_name}' on Meta Ads with payload: {payload}")
-
-#         # Create campaign
-#         result = provider.create_campaign(payload)
-
-#         if result.success:
-#             # Store the returned campaign ID (PublishResult uses post_id)
-#             doc.custom_facebook_campaign_id = result.campaign_id
-#             logger.info(f"✓ Campaign created successfully on Meta: {result.campaign_id}")
-#             frappe.msgprint(
-#                 _("Campaign created successfully on Meta Ads. ID: {0}").format(result.campaign_id),
-#                 alert=True,
-#             )
-#         else:
-#             error_msg = result.error_message or "Unknown error from Meta API"
-#             logger.error(f"Failed to create campaign on Meta: {error_msg}")
-#             frappe.throw(_("Failed to create campaign on Meta Ads: {0}").format(error_msg))
-
-#     except frappe.DoesNotExistError:
-#         frappe.throw(
-#             _("Facebook Integration '{0}' does not exist or is invalid.").format(doc.custom_select_facebook_ad_account)
-#         )
-#     except ValueError as e:
-#         frappe.throw(_("Invalid configuration: {0}").format(str(e)))
-#     except Exception as e:
-#         error_msg = str(e)
-#         logger.error(f"Unexpected error creating campaign: {error_msg}")
-#         frappe.log_error(frappe.get_traceback(), "Marketing Campaign Creation Error")
-#         frappe.throw(_("Failed to create campaign: {0}").format(error_msg))
-
-
-# def build_campaign_payload(doc) -> dict:
-#     """
-#     Build and validate campaign payload with all mappings and transformations
-#     """
-#     # Map campaign objectives to Meta API format (from Meta docs)
-#     objective_map = {
-#         "Awareness": "OUTCOME_AWARENESS",
-#         "Traffic": "OUTCOME_TRAFFIC",
-#         "Engagement": "OUTCOME_ENGAGEMENT",
-#         "Leads": "OUTCOME_LEADS",
-#         "Sales": "OUTCOME_SALES",
-#         "App promotion": "OUTCOME_APP_PROMOTION",
-#     }
-#     objective = objective_map.get(doc.custom_campaign_objective)
-#     if not objective:
-#         frappe.throw(_("Invalid Campaign Objective selected"))
-
-#     # Map special ad categories to Meta format (MUST be array)
-#     special_ad_categories = ["NONE"]
-#     if getattr(doc, "custom_special_ad_categories", None) and doc.custom_special_ad_categories != "NONE":
-#         cat_map = {
-#             "None":"NONE",
-#             "Housing": "HOUSING",
-#             "Employment": "EMPLOYMENT",
-#             "Financial products and services": "CREDIT",
-#             "Social issues, elections or politics": "ISSUES_ELECTIONS_POLITICS",
-#         }
-#         mapped_cat = cat_map.get(doc.custom_special_ad_categories)
-#         if not mapped_cat:
-#             frappe.throw(_("Invalid Special Ad Category selected"))
-#         special_ad_categories = [mapped_cat]
-
-#     # Map buying type to Meta format
-#     buying_type_map = {
-#         "Auction": "AUCTION",
-#         "Reservation": "RESERVATION",
-#     }
-#     buying_type = buying_type_map.get(getattr(doc, "custom_choose_buying_type", ""), "AUCTION")
-
-#     # Build final payload - only send what Meta API expects
-#     payload = {
-#         "name": doc.custom_campaign_name,
-#         "objective": objective,
-#         "status": "ACTIVE" if doc.custom_enable_campaign else "PAUSED",  # Recommended: start PAUSED for safety
-#         "buying_type": buying_type,
-#         "special_ad_categories": special_ad_categories,
-#         "is_adset_budget_sharing_enabled": True if doc.custom_enable_adset_budget_sharing else False,  # Set to False (not a valid field for campaign creation in most cases)    
-#     }
-
-#     return payload
-
-# Copyright (c) 2026, Abhishek and contributors
-# For license information, please see license.txt
-
-# Copyright (c) 2026, Abhishek and contributors
-# For license information, please see license.txt
-
 import frappe
-import logging
 from frappe import _
-from frappe_social.ads_manager.providers.meta_ads import MetaAdsProvider
+from frappe.utils import get_datetime
+from datetime import datetime
 
-logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-
-OBJECTIVE_MAP = {
-    "Awareness":     "OUTCOME_AWARENESS",
-    "Traffic":       "OUTCOME_TRAFFIC",
-    "Engagement":    "OUTCOME_ENGAGEMENT",
-    "Leads":         "OUTCOME_LEADS",
-    "Sales":         "OUTCOME_SALES",
-    "App promotion": "OUTCOME_APP_PROMOTION",
-}
-
-BID_STRATEGY_MAP = {
-    "Highest volume":       "LOWEST_COST_WITHOUT_CAP",
-    "Highest value":        "LOWEST_COST_WITHOUT_CAP",
-    "Cost per result goal": "COST_CAP",
-    "Bid cap":              "LOWEST_COST_WITH_BID_CAP",
-    "Minimum ROAS":         "LOWEST_COST_WITH_MIN_ROAS",
-}
-
-BUYING_TYPE_MAP = {
-    "Auction":     "AUCTION",
-    "Reservation": "RESERVED",
-}
-
-SPECIAL_AD_CATEGORY_CHECKBOX_MAP = {
-    "custom_housing":                             "HOUSING",
-    "custom_employment":                          "EMPLOYMENT",
-    "custom_financial_products_and_services":     "CREDIT",
-    "custom_social_issues_elections_or_politics": "ISSUES_ELECTIONS_POLITICS",
-}
-
-# Meta minimum spend_cap in minor currency units (error 2446307 if below this)
-# ₹100 in paise = 10000 | $1 in cents = 100
+# Meta minimum spend cap in minor units (₹100 = 10000 paise)
 SPEND_CAP_MIN_MINOR = 10000
 
+# Allowed ODAX objectives (v25.0)
+ALLOWED_OBJECTIVES = [
+    "OUTCOME_AWARENESS",
+    "OUTCOME_TRAFFIC",
+    "OUTCOME_ENGAGEMENT",
+    "OUTCOME_LEADS",
+    "OUTCOME_SALES",
+    "OUTCOME_APP_PROMOTION",
+]
 
-# ---------------------------------------------------------------------------
-# Hook entry point
-# ---------------------------------------------------------------------------
+BID_STRATEGIES_REQUIRING_CAP = [
+    "LOWEST_COST_WITH_BID_CAP",
+    "COST_CAP",
+]
 
-def marketing_campaign_before_save(doc, method=None):
-    """Hook handler for Marketing Campaign before_save event"""
-    if (
-        doc.is_new()
-        and getattr(doc, "custom_is_meta_ads", False)
-        and not getattr(doc, "custom_facebook_campaign_id", None)
-    ):
-        create_meta_campaign(doc)
+META_GRAPH_VERSION = "v25.0"
+META_GRAPH_BASE = f"https://graph.facebook.com/{META_GRAPH_VERSION}"
 
-
-# ---------------------------------------------------------------------------
-# Campaign creation
-# ---------------------------------------------------------------------------
-
-def create_meta_campaign(doc):
-    """Create campaign via Meta Ads provider and store the campaign_id"""
-    try:
-        if not getattr(doc, "custom_is_meta_ads", False):
-            return
-
-        if not getattr(doc, "custom_select_facebook_ad_account", None):
-            frappe.throw(_("Select Ad Account is required"))
-
-        if not getattr(doc, "custom_campaign_objective", None):
-            frappe.throw(_("Campaign Objective is required"))
-
-        provider = MetaAdsProvider(doc.custom_select_facebook_ad_account)
-        payload = build_campaign_payload(doc)
-
-        logger.info(
-            f"Creating campaign '{doc.custom_campaign_name}' on Meta Ads with payload: {payload}"
-        )
-
-        result = provider.create_campaign(payload)
-
-        if result.success:
-            doc.custom_facebook_campaign_id = result.campaign_id
-            logger.info(f"✓ Campaign created successfully on Meta: {result.campaign_id}")
-            frappe.msgprint(
-                _("Campaign created successfully on Meta Ads. ID: {0}").format(result.campaign_id),
-                alert=True,
-            )
-        else:
-            error_msg = result.error_message or "Unknown error from Meta API"
-            logger.error(f"Failed to create campaign on Meta: {error_msg}")
-            frappe.throw(_("Failed to create campaign on Meta Ads: {0}").format(error_msg))
-
-    except frappe.ValidationError:
-        raise  # Re-raise user-facing validation errors as-is (prevents double-wrapping)
-
-    except frappe.DoesNotExistError:
-        frappe.throw(
-            _("Facebook Integration '{0}' does not exist or is invalid.").format(
-                doc.custom_select_facebook_ad_account
-            )
-        )
-    except ValueError as e:
-        frappe.throw(_("Invalid configuration: {0}").format(str(e)))
-    except Exception as e:
-        error_msg = str(e)
-        logger.error(f"Unexpected error creating campaign: {error_msg}")
-        frappe.log_error(frappe.get_traceback(), "Marketing Campaign Creation Error")
-        frappe.throw(_("Failed to create campaign: {0}").format(error_msg))
-
-
-# ---------------------------------------------------------------------------
-# Main payload builder
-# ---------------------------------------------------------------------------
 
 def build_campaign_payload(doc) -> dict:
     """
-    Build a complete Facebook campaign creation payload from a Marketing Campaign doc.
-    Reference: POST /act_{ad_account_id}/campaigns
-    https://developers.facebook.com/docs/marketing-api/reference/ad-account/campaigns/
+    Build validated Meta Campaign payload (v25.0).
+
+    IMPORTANT: Ad Labels must be resolved (IDs obtained) BEFORE calling this
+    function. Call resolve_and_persist_ad_label_ids() first when labels are
+    present. This function expects label IDs already stored in
+    doc.custom_ad_campaign_labels[*].label_id.
     """
 
-    # ── 1. REQUIRED: name ────────────────────────────────────────────────────
-    name = getattr(doc, "custom_campaign_name", None) or doc.name
-    if not name:
-        frappe.throw(_("Campaign name is required"))
+    # ----------------------------
+    # VALIDATION
+    # ----------------------------
+    _validate_required_fields(doc)
+    _validate_objective(doc)
+    _validate_budget_rules(doc)
+    _validate_bid_strategy(doc)
+    _validate_spend_cap(doc)
+    _validate_budget_schedule_specs(doc)
+    _validate_campaign_optimization_type(doc)
 
-    # ── 2. REQUIRED: objective ───────────────────────────────────────────────
-    objective = OBJECTIVE_MAP.get(getattr(doc, "custom_campaign_objective", ""))
-    if not objective:
-        frappe.throw(_("Invalid or missing Campaign Objective"))
-
-    # ── 3. REQUIRED: special_ad_categories (must always be a non-empty array) ─
+    # ----------------------------
+    # BASE PAYLOAD
+    # ----------------------------
     special_ad_categories = _build_special_ad_categories(doc)
 
-    # ── 4. status — only ACTIVE / PAUSED allowed on creation ─────────────────
-    status = "ACTIVE" if getattr(doc, "custom_enable_campaign", False) else "PAUSED"
-
-    # ── 5. buying_type — AUCTION (default) or RESERVED ───────────────────────
-    buying_type = BUYING_TYPE_MAP.get(
-        getattr(doc, "custom_choose_buying_type", "Auction"), "AUCTION"
-    )
-
-    # ── Budget mode inputs ────────────────────────────────────────────────────
-    is_adset_sharing = bool(getattr(doc, "custom_enable_adset_budget_sharing", False))
-    budget_amount    = getattr(doc, "custom_budget_amount", None)
-    budget_type      = getattr(doc, "custom_budget_type_dailylifetime", "Daily budget")
-
-    # Warn when conflicting budget config is detected
-    if is_adset_sharing and budget_amount:
-        frappe.msgprint(
-            _(
-                "Campaign-level budget is ignored when Ad Set Budget Sharing is enabled. "
-                "Budget must be set at the Ad Set level."
-            ),
-            alert=True,
-            indicator="orange",
-        )
-
-    # ── Core payload (always present fields) ─────────────────────────────────
     payload = {
-        "name":                  name,
-        "objective":             objective,
-        "status":                status,
-        "buying_type":           buying_type,
+        "name": doc.custom_campaign_name.strip(),
+        "objective": doc.custom_campaign_objective,
+        # Use the dedicated status Select field (PAUSED / ACTIVE / ARCHIVED).
+        # Fall back to PAUSED if somehow blank — Meta requires a valid value.
+        "status": doc.custom_status or "PAUSED",
+        "buying_type": doc.custom_choose_buying_type or "AUCTION",
         "special_ad_categories": special_ad_categories,
-        "is_adset_budget_sharing_enabled": is_adset_sharing,
     }
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # BUDGET MODE — three mutually exclusive cases
-    #
-    # ⚠️  NEVER send is_adset_budget_sharing_enabled: False explicitly.
-    #     The Meta API only accepts True to OPT-IN to budget sharing.
-    #     Passing False causes HTTP 400 error subcode 2446307.
-    #     Omitting the field entirely = default disabled state.
-    # ─────────────────────────────────────────────────────────────────────────
+    # ----------------------------
+    # Special Ad Category Countries
+    # Required when a real special category is selected (not just the ["NONE"] sentinel).
+    # ----------------------------
+    if special_ad_categories != ["NONE"]:
+        countries = _build_special_ad_category_country(doc)
+        if countries:
+            payload["special_ad_category_countries"] = countries
 
-    # CASE 1: Ad Set Budget Sharing
-    # Budgets stay at adset level; up to 20% can be shared across adsets.
-    # bid_strategy is REQUIRED with this mode (error 4834005 if missing).
-    if is_adset_sharing:
-        payload["is_adset_budget_sharing_enabled"] = True  # ONLY send when True
-
-        bid_strategy_label = getattr(doc, "custom_campaign_bid_strategy_", None)
-        bid_strategy = BID_STRATEGY_MAP.get(
-            bid_strategy_label or "Highest volume", "LOWEST_COST_WITHOUT_CAP"
-        )
-        payload["bid_strategy"] = bid_strategy  # Required in this mode
-
-    # CASE 2: Campaign Budget Optimization (CBO)
-    # Campaign-level budget auto-distributed across adsets.
-    # Do NOT send is_adset_budget_sharing_enabled at all.
-    elif budget_amount:
-        budget_minor = int(float(budget_amount) * 100)  # major → minor currency units
-        if budget_type == "Lifetime budget":
+    # ----------------------------
+    # CBO (Advantage+ Campaign Budget)
+    # Activated by setting daily_budget or lifetime_budget at campaign level.
+    # ----------------------------
+    if doc.custom_enable_adset_budget_sharing:
+        budget_minor = int(float(doc.custom_budget_amount) * 100)
+        if doc.custom_budget_type_dailylifetime == "Lifetime budget":
             payload["lifetime_budget"] = budget_minor
         else:
             payload["daily_budget"] = budget_minor
 
-        # bid_strategy is optional but valid alongside CBO
-        bid_strategy_label = getattr(doc, "custom_campaign_bid_strategy_", None)
-        if bid_strategy_label:
-            bid_strategy = BID_STRATEGY_MAP.get(bid_strategy_label)
-            if bid_strategy:
-                payload["bid_strategy"] = bid_strategy
+    # ----------------------------
+    # Start / End Time
+    # ----------------------------
+    if doc.custom_start_date_and_time:
+        payload["start_time"] = _to_iso(doc.custom_start_date_and_time)
 
-    # CASE 3: Plain adset-level budget (no sharing, no CBO)
-    # Simply omit is_adset_budget_sharing_enabled — Meta defaults to disabled.
-    # DO NOT send False explicitly — it causes error 2446307.
-    # else: pass  ← nothing to add; default state requires no field in payload
+    if doc.custom_end_date_and_time:
+        payload["stop_time"] = _to_iso(doc.custom_end_date_and_time)
 
-    # ── SPEND CAP ─────────────────────────────────────────────────────────────
-    # Validates BEFORE hitting the API to avoid error 2446307 / 2238055.
-    if getattr(doc, "custom_campaign_spending_limit", False):
-        spend_cap_amount = getattr(doc, "custom_add_campaign_spending_limit", None)
+    # ----------------------------
+    # Bid Strategy
+    # ----------------------------
+    if doc.custom_campaign_bid_strategy_:
+        payload["bid_strategy"] = doc.custom_campaign_bid_strategy_
 
-        # Guard 1: toggle on but no amount entered
-        if not spend_cap_amount or float(spend_cap_amount) <= 0:
-            frappe.msgprint(
-                _(
-                    "Campaign Spending Limit toggle is enabled but no amount is set. "
-                    "Spending limit will not be applied."
-                ),
-                alert=True,
-                indicator="orange",
-            )
-        else:
-            spend_cap_minor = int(float(spend_cap_amount) * 100)
+        if doc.custom_campaign_bid_strategy_ in BID_STRATEGIES_REQUIRING_CAP:
+            payload["bid_amount"] = int(float(doc.custom_bid_amount) * 100)
 
-            # Guard 2: below Meta's absolute minimum floor
-            if spend_cap_minor < SPEND_CAP_MIN_MINOR:
-                frappe.throw(
-                    _(
-                        "Campaign Spending Limit is too low. "
-                        "Minimum allowed is ₹{0}. You entered ₹{1}."
-                    ).format(SPEND_CAP_MIN_MINOR // 100, float(spend_cap_amount))
-                )
+        # ROAS strategy uses roas_average_floor, NOT bid_amount.
+        # Meta expects this as an integer in units of 0.01
+        # (e.g. a 2.0x ROAS target → send 200).
+        if doc.custom_campaign_bid_strategy_ == "LOWEST_COST_WITH_MIN_ROAS":
+            payload["roas_average_floor"] = int(float(doc.custom_roas_value) * 100)
 
-            # Guard 3: spend_cap must be >= campaign budget when CBO is active
-            campaign_budget_minor = payload.get("daily_budget") or payload.get("lifetime_budget", 0)
-            if campaign_budget_minor and spend_cap_minor < campaign_budget_minor:
-                frappe.throw(
-                    _(
-                        "Campaign Spending Limit (₹{0}) cannot be less than "
-                        "the Campaign Budget (₹{1})."
-                    ).format(spend_cap_minor // 100, campaign_budget_minor // 100)
-                )
+    # ----------------------------
+    # Spend Cap
+    # ----------------------------
+    if doc.custom_add_campaign_spending_limit:
+        payload["spend_cap"] = int(float(doc.custom_add_campaign_spending_limit) * 100)
 
-            payload["spend_cap"] = spend_cap_minor
+    # ----------------------------
+    # Campaign Optimization Type
+    # Only send to Meta when explicitly set to "ICO_ONLY".
+    # The Select field defaults to the string "NONE" which should be omitted
+    # from the payload entirely (Meta doesn't accept "NONE" as a value here).
+    # ----------------------------
+    opt_type = getattr(doc, "custom_campaign_optimization_type", None)
+    if opt_type and opt_type == "ICO_ONLY":
+        payload["campaign_optimization_type"] = opt_type
 
-    # ── BUDGET SCHEDULE SPECS ─────────────────────────────────────────────────
-    if getattr(doc, "custom_enable_budget_scheduling", False):
-        schedule_rows = getattr(doc, "custom_budget_schedule_periods", [])
-        if schedule_rows:
-            specs = _build_budget_schedule_specs(schedule_rows)
-            if specs:
-                payload["budget_schedule_specs"] = specs
+    # ----------------------------
+    # Promoted Object
+    # ----------------------------
+    promoted_object = _build_promoted_object(doc)
+    if promoted_object:
+        payload["promoted_object"] = promoted_object
 
-    # ── SPECIAL AD CATEGORY COUNTRY ───────────────────────────────────────────
-    # Required by Meta when any category other than NONE is selected
-    if special_ad_categories != ["NONE"]:
-        country = getattr(doc, "custom_special_ad_category_country", None)
-        if country:
-            payload["special_ad_category_country"] = (
-                [c.strip() for c in country.split(",") if c.strip()]
-                if isinstance(country, str)
-                else list(country)
-            )
+    # ----------------------------
+    # Budget Schedule Specs (RESERVED campaigns only)
+    # ----------------------------
+    if (
+        doc.custom_choose_buying_type == "RESERVED"
+        and getattr(doc, "custom_budget_schedule_specs", None)
+    ):
+        specs = _build_budget_schedule_specs(doc)
+        if specs:
+            payload["budget_schedule_specs"] = specs
 
-    # ── FLIGHT DATES ──────────────────────────────────────────────────────────
-    start_time = getattr(doc, "custom_start_time", None) or getattr(doc, "start_date", None)
-    stop_time  = getattr(doc, "custom_stop_time", None)  or getattr(doc, "end_date", None)
-    if start_time:
-        payload["start_time"] = _to_iso(start_time)
-    if stop_time:
-        payload["stop_time"] = _to_iso(stop_time)
+    # ----------------------------
+    # Ad Labels
+    # IDs must be pre-resolved. Format: [{"id": "label_id_1"}, ...]
+    # ----------------------------
+    ad_label_refs = _build_ad_label_id_refs(doc)
+    if ad_label_refs:
+        payload["adlabels"] = ad_label_refs
 
-    # ── iOS 14 SKAdNetwork ────────────────────────────────────────────────────
-    if getattr(doc, "custom_is_skadnetwork_attribution", False):
-        payload["is_skadnetwork_attribution"] = True
-
-    # ── PROMOTED OBJECT (required for App Promotion objective) ───────────────
-    if objective == "OUTCOME_APP_PROMOTION":
-        app_id = getattr(doc, "custom_promoted_app_id", None)
-        if app_id:
-            payload["promoted_object"] = {"application_id": app_id}
-
-    # ── AD LABELS ─────────────────────────────────────────────────────────────
-    adlabels_raw = getattr(doc, "custom_adlabels", None)
-    if adlabels_raw:
-        label_ids = (
-            [l.strip() for l in adlabels_raw.split(",") if l.strip()]
-            if isinstance(adlabels_raw, str)
-            else list(adlabels_raw)
-        )
-        if label_ids:
-            payload["adlabels"] = [{"id": lid} for lid in label_ids]
-
-    # ── SOURCE CAMPAIGN ID (when duplicated from another campaign) ────────────
-    # source_id = getattr(doc, "custom_source_campaign_id", None)
-    # if source_id:
-    #     payload["source_campaign_id"] = str(source_id)
-
-    # ── TOPLINE ID (Reservation / Reach-and-Frequency buys only) ─────────────
-    topline_id = getattr(doc, "custom_topline_id", None)
-    if topline_id:
-        payload["topline_id"] = str(topline_id)
-
-    logger.debug(f"Final campaign payload: {payload}")
     return payload
 
 
-# ---------------------------------------------------------------------------
-# Private helpers
-# ---------------------------------------------------------------------------
+# =========================================================
+# AD LABEL RESOLUTION  (Step that must run before payload build)
+# =========================================================
+
+def resolve_and_persist_ad_label_ids(doc, access_token: str) -> None:
+    """
+    Resolves Meta AdLabel IDs for every row in doc.custom_ad_campaign_labels.
+
+    For each row:
+      - If label_id is already set → skip (already created/cached from a prior run).
+      - If label_id is blank:
+          1. Fetch all existing labels on the account once (to avoid duplicates).
+          2. If a label with the same name already exists → reuse its ID.
+          3. If not found → create it via  POST /act_{account}/adlabels  and store ID.
+
+    The doc is saved at the end so label_ids persist for future use.
+
+    Args:
+        doc:          Marketing Campaign Frappe document
+        access_token: Valid Meta API access token
+    """
+    labels = getattr(doc, "custom_ad_campaign_labels", None) or []
+    if not labels:
+        return
+
+    ad_account_id = _normalise_account_id(doc.custom_select_facebook_ad_account)
+
+    # Fetch all existing labels from Meta once → build a name→id lookup
+    existing_labels = _fetch_existing_ad_labels(ad_account_id, access_token)
+    existing_by_name = {v["name"].lower(): v["id"] for v in existing_labels}
+
+    updated = False
+
+    for row in labels:
+        label_name = (row.label_name or "").strip()
+        if not label_name:
+            continue
+
+        # Already resolved in a previous run — nothing to do
+        if getattr(row, "label_id", None):
+            frappe.logger().info(
+                f"[AdLabel] '{label_name}' already resolved → ID {row.label_id}"
+            )
+            continue
+
+        if label_name.lower() in existing_by_name:
+            # ── Reuse existing label ──────────────────────────────────────
+            row.label_id = existing_by_name[label_name.lower()]
+            updated = True
+            frappe.logger().info(
+                f"[AdLabel] Reusing existing label '{label_name}' → ID {row.label_id}"
+            )
+        else:
+            # ── Create new label on Meta ──────────────────────────────────
+            label_id = _create_ad_label_on_meta(ad_account_id, label_name, access_token)
+            row.label_id = label_id
+            # Cache locally so a duplicate name in a later row is also reused
+            existing_by_name[label_name.lower()] = label_id
+            updated = True
+            frappe.logger().info(
+                f"[AdLabel] Created new label '{label_name}' → ID {label_id}"
+            )
+
+    if updated:
+        # Persist label IDs back to Frappe so they survive future saves
+        doc.save(ignore_permissions=True)
+
+
+def _normalise_account_id(account_id: str) -> str:
+    """Ensure the account ID always has the required act_ prefix."""
+    if not account_id.startswith("act_"):
+        return f"act_{account_id}"
+    return account_id
+
+
+def _fetch_existing_ad_labels(ad_account_id: str, access_token: str) -> list:
+    """
+    GET /act_{ad_account_id}/adlabels?fields=id,name&limit=200
+
+    Follows cursor-based pagination to retrieve ALL labels on the account.
+    Returns a list of {"id": "...", "name": "..."} dicts.
+    On network/API failure: logs the error and returns an empty list
+    (non-fatal — we will attempt creation and let Meta reject true duplicates).
+    """
+    import requests
+
+    url = f"{META_GRAPH_BASE}/{ad_account_id}/adlabels"
+    params = {
+        "fields": "id,name",
+        "limit": 200,
+        "access_token": access_token,
+    }
+
+    all_labels = []
+
+    while url:
+        try:
+            resp = requests.get(url, params=params, timeout=30)
+            resp.raise_for_status()
+            data = resp.json()
+        except requests.RequestException as exc:
+            frappe.log_error(
+                title="Meta AdLabel Fetch Error",
+                message=f"Failed to fetch existing ad labels from {ad_account_id}: {exc}",
+            )
+            break  # non-fatal
+
+        if "error" in data:
+            frappe.log_error(
+                title="Meta AdLabel Fetch API Error",
+                message=f"Meta error fetching labels: {data['error']}",
+            )
+            break
+
+        all_labels.extend(data.get("data", []))
+
+        # Follow cursor pagination
+        next_url = data.get("paging", {}).get("next")
+        if next_url:
+            url = next_url
+            params = {}  # all params are already embedded in the next URL
+        else:
+            break
+
+    return all_labels
+
+
+def _create_ad_label_on_meta(ad_account_id: str, label_name: str, access_token: str) -> str:
+    """
+    POST /act_{ad_account_id}/adlabels
+    Request body: { "name": "<label_name>", "access_token": "<token>" }
+
+    Meta API response on success:
+        { "id": "23847392847392847" }
+
+    Returns:
+        The new label's ID string.
+
+    Raises:
+        frappe.ValidationError on any API or network failure.
+    """
+    import requests
+
+    url = f"{META_GRAPH_BASE}/{ad_account_id}/adlabels"
+    body = {
+        "name": label_name,
+        "access_token": access_token,
+    }
+
+    try:
+        resp = requests.post(url, json=body, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+    except requests.RequestException as exc:
+        frappe.throw(
+            _("Network error while creating ad label '{0}': {1}").format(label_name, str(exc))
+        )
+
+    # Meta returns errors as JSON even on HTTP 200 in some cases
+    if "error" in data:
+        err = data["error"]
+        frappe.throw(
+            _("Meta API error creating ad label '{0}': [{1}] {2}").format(
+                label_name,
+                err.get("code", "?"),
+                err.get("message", "Unknown error"),
+            )
+        )
+
+    label_id = data.get("id")
+    if not label_id:
+        frappe.throw(
+            _("Meta did not return an ID for ad label '{0}'. Response: {1}").format(
+                label_name, str(data)
+            )
+        )
+
+    return label_id
+
+
+def _build_ad_label_id_refs(doc) -> list:
+    """
+    Build the adlabels list for the campaign payload.
+
+    Meta Campaign API expects:
+        "adlabels": [{"id": "label_id_1"}, {"id": "label_id_2"}, ...]
+
+    Skips rows with no label_id (with a warning logged) so that a partial
+    failure in label creation does not silently block campaign creation.
+    """
+    refs = []
+    for row in getattr(doc, "custom_ad_campaign_labels", []) or []:
+        label_name = (row.label_name or "").strip()
+        label_id = getattr(row, "label_id", None)
+
+        if not label_name:
+            continue  # blank rows are silently skipped
+
+        if label_id:
+            refs.append({"id": label_id})
+        else:
+            frappe.log_error(
+                title="AdLabel ID Not Resolved",
+                message=(
+                    f"Label '{label_name}' has no label_id. "
+                    f"It will NOT be attached to the campaign. "
+                    f"Ensure resolve_and_persist_ad_label_ids() ran before building the payload."
+                ),
+            )
+    return refs
+
+
+# =========================================================
+# VALIDATION HELPERS
+# =========================================================
+
+def _validate_required_fields(doc):
+    if not doc.custom_campaign_name:
+        frappe.throw(_("Campaign Name is required"))
+    if not doc.custom_campaign_objective:
+        frappe.throw(_("Campaign Objective is required"))
+    if not doc.custom_select_facebook_ad_account:
+        frappe.throw(_("Facebook Ad Account is required"))
+
+
+def _validate_objective(doc):
+    if doc.custom_campaign_objective not in ALLOWED_OBJECTIVES:
+        frappe.throw(
+            _("Invalid objective. Must be one of: {0}").format(", ".join(ALLOWED_OBJECTIVES))
+        )
+
+
+def _validate_budget_rules(doc):
+    if doc.custom_enable_adset_budget_sharing:
+        if not doc.custom_budget_amount:
+            frappe.throw(_("Budget Amount is required when CBO is enabled"))
+        if doc.custom_budget_type_dailylifetime == "Lifetime budget":
+            if not doc.custom_start_date_and_time:
+                frappe.throw(_("Start time is required for Lifetime Budget"))
+    else:
+        if doc.custom_budget_amount:
+            frappe.throw(
+                _("Disable campaign budget when CBO is off (budget must be at Ad Set level)")
+            )
+
+
+def _validate_bid_strategy(doc):
+    strategy = doc.custom_campaign_bid_strategy_
+    if strategy in BID_STRATEGIES_REQUIRING_CAP:
+        if not getattr(doc, "custom_bid_amount", None):
+            frappe.throw(_("Bid Amount is required for selected Bid Strategy"))
+    if strategy == "LOWEST_COST_WITH_MIN_ROAS":
+        if not getattr(doc, "custom_roas_value", None):
+            frappe.throw(_("ROAS value is required for MIN_ROAS strategy"))
+
+
+def _validate_spend_cap(doc):
+    if doc.custom_add_campaign_spending_limit:
+        spend_minor = int(float(doc.custom_add_campaign_spending_limit) * 100)
+        if spend_minor < SPEND_CAP_MIN_MINOR:
+            frappe.throw(
+                _("Spend cap must be at least {0} (minor currency units)").format(
+                    SPEND_CAP_MIN_MINOR
+                )
+            )
+
+
+def _validate_budget_schedule_specs(doc):
+    if not getattr(doc, "custom_budget_schedule_specs", None):
+        return
+    if doc.custom_choose_buying_type != "RESERVED":
+        frappe.throw(_("Budget Schedule Specs only allowed for RESERVED campaigns"))
+    for row in doc.custom_budget_schedule_specs:
+        if not row.time_start:
+            frappe.throw(_("Time Start is required in Budget Schedule Spec"))
+        if not row.time_end:
+            frappe.throw(_("Time End is required in Budget Schedule Spec"))
+        if not row.budget_value or float(row.budget_value) <= 0:
+            frappe.throw(_("Budget Value must be greater than 0 in Budget Schedule Spec"))
+
+
+def _validate_campaign_optimization_type(doc):
+    value = getattr(doc, "custom_campaign_optimization_type", None)
+
+    # The Select field defaults to the string "NONE" (its first option).
+    # Treat blank AND the literal "NONE" as "not configured" — nothing to validate.
+    if not value or value == "NONE":
+        return
+
+    # Only "ICO_ONLY" is a meaningful value that requires further checks
+    if value != "ICO_ONLY":
+        frappe.throw(_("Invalid Campaign Optimization Type. Allowed values: NONE, ICO_ONLY."))
+
+    if doc.custom_campaign_objective not in ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"]:
+        frappe.throw(
+            _("Campaign Optimization Type 'ICO_ONLY' is only allowed for "
+              "Sales or App Promotion campaigns")
+        )
+
+
+# =========================================================
+# PAYLOAD BUILDERS
+# =========================================================
 
 def _build_special_ad_categories(doc) -> list:
-    """
-    Meta API: send [] when no special categories apply.
-    "NONE" as a string value is rejected in API v17.0+ (use empty array instead).
-    """
     categories = []
-
-    # Priority 1: individual checkboxes (multi-category)
-    for fieldname, api_value in SPECIAL_AD_CATEGORY_CHECKBOX_MAP.items():
-        if getattr(doc, fieldname, False):
-            categories.append(api_value)
-
-    # Priority 2: single Select field fallback
-    if not categories:
-        cat_map = {
-            "Housing":                              "HOUSING",
-            "Employment":                           "EMPLOYMENT",
-            "Financial products and services":      "CREDIT",
-            "Social issues, elections or politics": "ISSUES_ELECTIONS_POLITICS",
-        }
-        sel    = getattr(doc, "custom_special_ad_categories", "None")
-        mapped = cat_map.get(sel)  # Returns None for "None" — intentionally excluded
-        if mapped:
-            categories.append(mapped)
-
-    # ✅ Return empty array when no categories — NOT ["NONE"]
-    # Meta API v17.0+ rejects "NONE" as an enum string value
-    return categories  # [] when empty, or ["HOUSING"] etc. when set
+    if getattr(doc, "custom_housing", False):
+        categories.append("HOUSING")
+    if getattr(doc, "custom_employment", False):
+        categories.append("EMPLOYMENT")
+    if getattr(doc, "custom_financial_products_and_services", False):
+        categories.append("CREDIT")
+    if getattr(doc, "custom_social_issues_elections_or_politics", False):
+        categories.append("ISSUES_ELECTIONS_POLITICS")
+    return categories if categories else ["NONE"]
 
 
+def _build_special_ad_category_country(doc) -> list:
+    if not getattr(doc, "custom_special_ad_category_country", None):
+        return []
+    countries = []
+    for row in doc.custom_special_ad_category_country:
+        country_code = frappe.db.get_value("Country", row.country, "code")
+        if not country_code:
+            frappe.throw(
+                _("Country '{0}' must have an ISO 2-letter code in the Country master").format(
+                    row.country
+                )
+            )
+        countries.append(country_code.upper())
+    return countries
 
-def _build_budget_schedule_specs(rows: list) -> list:
-    """
-    Convert child-table rows (Time Period for Budget) → budget_schedule_specs.
-    Expected child fields:
-        time_start        Datetime
-        time_end          Datetime
-        budget_value      Currency  (major units; multiplied ×100 for minor units)
-        budget_value_type Select    ABSOLUTE | MULTIPLIER
-        recurrence_type   Select    ONE_TIME | WEEKLY
-    """
-    import datetime
 
-    def to_unix(dt):
-        if isinstance(dt, datetime.datetime):
-            return int(dt.timestamp())
-        if isinstance(dt, datetime.date):
-            return int(datetime.datetime.combine(dt, datetime.time()).timestamp())
-        return int(dt)
-
+def _build_budget_schedule_specs(doc) -> list:
     specs = []
-    for row in rows:
-        time_start = getattr(row, "time_start", None)
-        time_end   = getattr(row, "time_end", None)
-        budget_val = getattr(row, "budget_value", None)
-        val_type   = (getattr(row, "budget_value_type", "ABSOLUTE") or "ABSOLUTE").upper()
-
-        if not (time_start and time_end and budget_val):
-            continue  # skip incomplete rows silently
-
-        specs.append({
-            "time_start":        to_unix(time_start),
-            "time_end":          to_unix(time_end),
-            "budget_value":      int(float(budget_val) * 100),
-            "budget_value_type": val_type,
-        })
-
+    for row in doc.custom_budget_schedule_specs or []:
+        if not row.time_start or not row.time_end:
+            frappe.throw(_("Time Start and Time End are required in Budget Schedule Specs"))
+        if not row.budget_value:
+            frappe.throw(_("Budget Value is required in Budget Schedule Specs"))
+        spec = {
+            "time_start": int(get_datetime(row.time_start).timestamp()),
+            "time_end": int(get_datetime(row.time_end).timestamp()),
+            "budget_value": int(float(row.budget_value) * 100),
+            "budget_value_type": row.budget_value_type or "ABSOLUTE",
+        }
+        if row.recurrence_type:
+            spec["recurrence_type"] = row.recurrence_type
+        specs.append(spec)
     return specs
 
 
-def _to_iso(value) -> str:
-    """Convert Frappe date / datetime / string to ISO-8601 for Meta API."""
-    import datetime
-    if isinstance(value, datetime.datetime):
-        return value.isoformat()
-    if isinstance(value, datetime.date):
-        return datetime.datetime.combine(value, datetime.time()).isoformat()
-    return str(value)
+def _build_promoted_object(doc) -> dict | None:
+    if not doc.custom_promoted_object_type or doc.custom_promoted_object_type == "None":
+        return None
 
+    po = {}
+
+    if doc.custom_promoted_object_type == "Pixel":
+        if not doc.custom_pixel_id:
+            frappe.throw(_("Pixel ID is required for Pixel promoted object"))
+        po["pixel_id"] = doc.custom_pixel_id
+        if doc.custom_custom_event_type:
+            po["custom_event_type"] = doc.custom_custom_event_type
+        if doc.custom_value_semantic_type:
+            po["value_semantic_type"] = doc.custom_value_semantic_type
+
+    elif doc.custom_promoted_object_type == "App":
+        if not doc.custom_application_id:
+            frappe.throw(_("Application ID is required for App promoted object"))
+        po["application_id"] = doc.custom_application_id
+        if doc.custom_object_store_url:
+            po["object_store_url"] = doc.custom_object_store_url
+        if doc.custom_custom_event_type:
+            po["custom_event_type"] = doc.custom_custom_event_type
+
+    elif doc.custom_promoted_object_type == "Product Catalog":
+        if not doc.custom_product_catalog_id:
+            frappe.throw(_("Product Catalog ID is required"))
+        po["product_catalog_id"] = doc.custom_product_catalog_id
+        if doc.custom_product_set_id:
+            po["product_set_id"] = doc.custom_product_set_id
+        if doc.custom_product_sales_channel:
+            po["product_sales_channel"] = doc.custom_product_sales_channel
+
+    elif doc.custom_promoted_object_type == "Page":
+        if not doc.custom_page_id:
+            frappe.throw(_("Page ID is required for Page promoted object"))
+        po["page_id"] = doc.custom_page_id
+
+    elif doc.custom_promoted_object_type == "Instagram Profile":
+        if not doc.custom_instagram_profile_id:
+            frappe.throw(_("Instagram Profile ID is required"))
+        po["instagram_profile_id"] = doc.custom_instagram_profile_id
+
+    elif doc.custom_promoted_object_type == "Event":
+        if not doc.custom_event_id:
+            frappe.throw(_("Event ID is required for Event promoted object"))
+        po["event_id"] = doc.custom_event_id
+
+    elif doc.custom_promoted_object_type == "Lead Ads":
+        if not doc.custom_page_id:
+            frappe.throw(_("Page ID is required for Lead Ads promoted object"))
+        po["page_id"] = doc.custom_page_id
+
+    elif doc.custom_promoted_object_type == "Offline Dataset":
+        if not doc.custom_offline_dataset_id:
+            frappe.throw(_("Offline Dataset ID is required"))
+        po["offline_conversion_data_set_id"] = doc.custom_offline_dataset_id
+
+    return po if po else None
+
+
+def _to_iso(dt_value) -> str:
+    if isinstance(dt_value, datetime):
+        return dt_value.isoformat()
+    return get_datetime(dt_value).isoformat()
+
+
+def _get_access_token_for_account(ad_account_name: str) -> str:
+    """
+    Fetch the Meta access token from the Ads Account Integration doctype.
+    Adjust the field name 'access_token' to match your actual doctype.
+    """
+    token = frappe.db.get_value("Ads Account Integration", ad_account_name, "access_token")
+    if not token:
+        frappe.throw(
+            _("No access token found for Ad Account '{0}'. Please reconnect the account.").format(
+                ad_account_name
+            )
+        )
+    return token
+
+
+# =========================================================
+# WHITELISTED API
+# =========================================================
+
+@frappe.whitelist()
+def create_campaign_on_meta(campaign_name: str) -> dict:
+    """
+    Full Meta campaign creation flow:
+
+      Step 1 — Resolve / create ad labels on Meta (get their IDs)
+               POST /act_{account_id}/adlabels  for each unresolved label
+      Step 2 — Build validated campaign payload (using resolved label IDs)
+      Step 3 — POST to Meta Campaigns API
+               POST /act_{account_id}/campaigns
+      Step 4 — Store returned campaign_id in Frappe
+
+    The "adlabels" field in the campaign payload is:
+        [{"id": "label_id_1"}, {"id": "label_id_2"}, ...]
+
+    Args:
+        campaign_name: Name of the Marketing Campaign document
+
+    Returns:
+        dict with keys: success, campaign_id, message, is_new
+    """
+    import logging
+    from frappe_social.ads_manager.providers.meta_ads import MetaAdsProvider
+
+    logger = logging.getLogger(__name__)
+
+    try:
+        campaign_doc = frappe.get_doc("Marketing Campaign", campaign_name)
+
+        # ── Guard checks ──────────────────────────────────────────────────
+        if not campaign_doc.custom_is_meta_ads:
+            frappe.throw(_("Meta Ads is not enabled for this campaign"))
+
+        if not campaign_doc.custom_select_facebook_ad_account:
+            frappe.throw(_("Facebook Ad Account is required"))
+
+        if campaign_doc.custom_facebook_campaign_id:
+            return {
+                "success": True,
+                "message": _("Campaign already created on Meta"),
+                "campaign_id": campaign_doc.custom_facebook_campaign_id,
+                "is_new": False,
+            }
+
+        # ── Step 1: Resolve ad label IDs ─────────────────────────────────
+        ad_labels = getattr(campaign_doc, "custom_ad_campaign_labels", None) or []
+        if ad_labels:
+            logger.info(f"[{campaign_name}] Resolving {len(ad_labels)} ad label(s) on Meta...")
+
+            access_token = _get_access_token_for_account(
+                campaign_doc.custom_select_facebook_ad_account
+            )
+            # Creates missing labels via POST /act_{account}/adlabels
+            # and persists their IDs in the child table rows.
+            resolve_and_persist_ad_label_ids(campaign_doc, access_token)
+
+            # Reload so the saved label_ids are visible in this doc instance
+            campaign_doc.reload()
+            logger.info(f"[{campaign_name}] Ad labels resolved.")
+
+        # ── Step 2: Build payload ─────────────────────────────────────────
+        logger.info(f"[{campaign_name}] Building campaign payload...")
+        payload = build_campaign_payload(campaign_doc)
+        # At this point payload["adlabels"] = [{"id": "..."}, ...] if any labels exist
+
+        # ── Step 3: POST to Meta ──────────────────────────────────────────
+        ad_account = campaign_doc.custom_select_facebook_ad_account
+        provider = MetaAdsProvider(ad_account)
+
+        logger.info(f"[{campaign_name}] Posting campaign to Meta: {payload.get('name')}")
+        logger.info(f"[{campaign_name}] Full payload being sent: {payload}")
+
+        result = provider.create_campaign(payload)
+
+        if not result.success:
+            # Log the full payload so we can pinpoint which field Meta rejected
+            frappe.log_error(
+                title="Meta Campaign Payload That Was Rejected",
+                message=(
+                    f"Campaign: {campaign_name}\n"
+                    f"Error: {result.error_message}\n\n"
+                    f"Payload sent:\n{frappe.as_json(payload)}"
+                ),
+            )
+            frappe.throw(
+                _("Failed to create campaign on Meta: {0}").format(result.error_message)
+            )
+
+        # ── Step 4: Persist campaign ID ───────────────────────────────────
+        campaign_id = result.campaign_id
+        logger.info(f"[{campaign_name}] Campaign created → ID: {campaign_id}")
+
+        campaign_doc.custom_facebook_campaign_id = campaign_id
+        campaign_doc.save()
+
+        return {
+            "success": True,
+            "message": _("Campaign created successfully on Meta"),
+            "campaign_id": campaign_id,
+            "is_new": True,
+        }
+
+    except frappe.ValidationError as exc:
+        frappe.log_error(title="Meta Campaign Validation Error", message=str(exc))
+        frappe.throw(str(exc))
+    except Exception as exc:
+        error_msg = str(exc)
+        frappe.log_error(
+            title="Meta Campaign Creation Error",
+            message=(
+                f"Campaign: {campaign_name}\n"
+                f"Error: {error_msg}\n"
+                f"Traceback: {frappe.get_traceback()}"
+            ),
+        )
+        frappe.throw(_("Error creating campaign on Meta: {0}").format(error_msg))
+
+
+# =========================================================
+# HOOKS
+# =========================================================
+
+def marketing_campaign_before_save(doc, method):
+    """
+    Before-save hook for Marketing Campaign.
+    Validates all Meta fields. Does NOT resolve ad label IDs here —
+    that requires a live API call and must happen via 'Create Campaign on Meta'.
+    """
+    if not doc.custom_is_meta_ads:
+        return
+    try:
+        _validate_required_fields(doc)
+        _validate_objective(doc)
+        _validate_budget_rules(doc)
+        _validate_bid_strategy(doc)
+        _validate_spend_cap(doc)
+        _validate_budget_schedule_specs(doc)
+        _validate_campaign_optimization_type(doc)
+    except frappe.ValidationError:
+        raise

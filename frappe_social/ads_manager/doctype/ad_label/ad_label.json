@@ -1,0 +1,40 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-02-27 20:54:27.421481",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "label_name",
+  "meta_label_id"
+ ],
+ "fields": [
+  {
+   "fieldname": "label_name",
+   "fieldtype": "Data",
+   "label": "Label Name"
+  },
+  {
+   "fieldname": "meta_label_id",
+   "fieldtype": "Data",
+   "label": "Meta Label ID",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-02-28 22:42:47.042797",
+ "modified_by": "Administrator",
+ "module": "Ads Manager",
+ "name": "Ad Label",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

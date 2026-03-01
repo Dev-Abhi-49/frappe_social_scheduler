@@ -135,6 +135,371 @@ def fetch_ads_account_analytics(integration_name: str) -> dict:
             "error_message": f"Error fetching analytics: {str(e)}"
         }
 
+@frappe.whitelist()
+def get_campaign_analytics(integration: str) -> dict:
+    """
+    Fetch and store campaign-level analytics from Meta Ads API.
+    
+    Endpoint: GET /{campaign_id}/insights
+    Reference: https://developers.facebook.com/docs/marketing-api/reference/ad-campaign-group/insights
+    
+    Args:
+        integration: The name/ID of the Marketing Campaign document
+        
+    Returns:
+        dict with success status, metrics, and campaign analytics document name
+    """
+    import logging
+    import json
+    logger = logging.getLogger(__name__)
+    
+    try:
+        campaign_name = integration  # For clarity
+        logger.info(f"=== Fetching Campaign Analytics ===")
+        logger.info(f"Campaign: {campaign_name}")
+        
+        # Get the Marketing Campaign document
+        marketing_campaign = frappe.get_doc("Marketing Campaign", campaign_name)
+        
+        # Validate that Meta Ads is enabled for this campaign
+        if not getattr(marketing_campaign, "custom_is_meta_ads", False):
+            return {
+                "success": False,
+                "error_message": "This campaign does not have Meta Ads enabled"
+            }
+        
+        # Get the Facebook Campaign ID
+        campaign_id = getattr(marketing_campaign, "custom_facebook_campaign_id", None)
+        if not campaign_id:
+            return {
+                "success": False,
+                "error_message": "No Facebook Campaign ID found. Please create the campaign first."
+            }
+        
+        # Get the Ad Account Integration to initialize provider
+        ad_account_name = getattr(marketing_campaign, "custom_select_facebook_ad_account", None)
+        if not ad_account_name:
+            return {
+                "success": False,
+                "error_message": "Ad Account is not selected"
+            }
+        
+        # Verify the integration exists and is connected
+        integration_doc = frappe.get_doc("Ads Account Integration", ad_account_name)
+        if not integration_doc.enabled or integration_doc.connection_status != "Connected":
+            return {
+                "success": False,
+                "error_message": "Ad Account Integration is not connected or enabled"
+            }
+        
+        logger.info(f"Campaign ID: {campaign_id}")
+        logger.info(f"Ad Account: {ad_account_name}")
+        
+        # Initialize MetaAdsProvider with the integration
+        provider = MetaAdsProvider(ad_account_name)
+        logger.info(f"Provider initialized with account ID: {provider.account_id}")
+        
+        # Fetch campaign-level analytics from Meta API
+        logger.info(f"Calling fetch_campaign_analytics for campaign {campaign_id}...")
+        result = provider.fetch_campaign_analytics(campaign_id)
+        
+        logger.info(f"API call completed. Success: {result.success}")
+        
+        if not result.success:
+            logger.warning(f"Campaign analytics fetch failed: {result.error_message}")
+            return {
+                "success": False,
+                "error_message": result.error_message or "No analytics data available",
+                "message": "📊 No Analytics Available",
+                "details": f"Campaign '{campaign_name}' does not have analytics data yet.\n\n"
+                          f"This could happen because:\n"
+                          f"• Campaign was just created\n"
+                          f"• No impressions or activity yet\n"
+                          f"• Data is still being processed by Meta\n\n"
+                          f"Please try again later."
+            }
+        
+        logger.info(f"Successfully fetched metrics. Keys: {list(result.metrics.keys())}")
+        
+        # Check if campaign analytics document already exists
+        existing_analytics = frappe.get_list(
+            "Campaign Analytics",
+            filters={
+                "marketing_campaign": campaign_name,
+                "ads_account_integration": ad_account_name
+            },
+            limit_page_length=1
+        )
+        
+        metrics = result.metrics
+        
+        # Update existing or create new
+        if existing_analytics:
+            # Update existing document
+            campaign_analytics = frappe.get_doc("Campaign Analytics", existing_analytics[0].name)
+            logger.info(f"Updating existing campaign analytics document: {campaign_analytics.name}")
+        else:
+            # Create new document
+            campaign_analytics = frappe.new_doc("Campaign Analytics")
+            campaign_analytics.marketing_campaign = campaign_name
+            campaign_analytics.ads_account_integration = ad_account_name
+            campaign_analytics.facebook_campaign_id = campaign_id
+            logger.info(f"Creating new campaign analytics document")
+        
+        # Update fields (works for both new and existing)
+        campaign_analytics.analytics_date = today()
+        campaign_analytics.last_synced = now_datetime()
+        campaign_analytics.sync_status = "Success"
+        
+        # Campaign-level metrics from Meta API
+        campaign_analytics.spend = float(metrics.get("spend", 0) or 0)
+        campaign_analytics.impressions = int(metrics.get("impressions", 0) or 0)
+        campaign_analytics.clicks = int(metrics.get("clicks", 0) or 0)
+        campaign_analytics.ctr = float(metrics.get("ctr", 0) or 0)
+        campaign_analytics.cpc = float(metrics.get("cpc", 0) or 0)
+        campaign_analytics.reach = int(metrics.get("reach", 0) or 0)
+        campaign_analytics.frequency = float(metrics.get("frequency", 0) or 0)
+        
+        # Action metrics
+        campaign_analytics.actions_count = int(metrics.get("actions", 0) or 0)
+        campaign_analytics.action_rate = float(metrics.get("action_rate", 0) or 0)
+        campaign_analytics.cost_per_action = float(metrics.get("cost_per_action", 0) or 0)
+        
+        # Conversion metrics
+        campaign_analytics.conversions = int(metrics.get("conversions", 0) or 0)
+        campaign_analytics.conversion_rate = float(metrics.get("conversion_rate", 0) or 0)
+        campaign_analytics.cost_per_conversion = float(metrics.get("cost_per_conversion", 0) or 0)
+        
+        # ROAS metrics
+        campaign_analytics.purchase_roas = float(metrics.get("purchase_roas", 0) or 0)
+        
+        # Video metrics (if applicable)
+        campaign_analytics.video_views = int(metrics.get("video_views", 0) or 0)
+        campaign_analytics.inline_link_clicks = int(metrics.get("inline_link_clicks", 0) or 0)
+        campaign_analytics.outbound_clicks = int(metrics.get("outbound_clicks", 0) or 0)
+        
+        # Store raw metrics as JSON for reference
+        campaign_analytics.raw_metrics = json.dumps(metrics, indent=2)
+        campaign_analytics.notes = f"Campaign-level analytics fetched from Meta API. Last 7 days aggregated data."
+        
+        # Save the analytics document
+        campaign_analytics.save(ignore_permissions=True)
+        frappe.db.commit()
+        
+        logger.info(f"Campaign analytics saved successfully: {campaign_analytics.name}")
+        
+        return {
+            "success": True,
+            "analytics_doc": campaign_analytics.name,
+            "metrics": metrics,
+            "message": f"Campaign analytics fetched successfully for {marketing_campaign.custom_campaign_name}"
+        }
+        
+    except frappe.DoesNotExistError as e:
+        logger.error(f"Document not found: {str(e)}")
+        return {
+            "success": False,
+            "error_message": f"Document not found: {str(e)}"
+        }
+    except Exception as e:
+        logger.exception(f"Error fetching campaign analytics")
+        frappe.log_error(
+            message=f"Campaign: {integration}\nError: {str(e)}",
+            title="Campaign Analytics Fetch Error"
+        )
+        return {
+            "success": False,
+            "error_message": f"Error fetching campaign analytics: {str(e)}"
+        }
+
+@frappe.whitelist()
+def get_adset_analytics(adset_id: str) -> dict:
+    """
+    Fetch and store ad set-level analytics from Meta Ads API.
+    
+    Endpoint: GET /{adset_id}/insights
+    Reference: https://developers.facebook.com/docs/marketing-api/reference/ad-set/insights
+    
+    Args:
+        adset_id: The name/ID of the Ad Set document
+        
+    Returns:
+        dict with success status, metrics, and ad set analytics document name
+    """
+    import logging
+    import json
+    logger = logging.getLogger(__name__)
+    
+    try:
+        logger.info(f"=== Fetching Ad Set Analytics ===")
+        logger.info(f"Ad Set: {adset_id}")
+        
+        # Get the Ad Set document
+        ad_set = frappe.get_doc("Ad Set", adset_id)
+        
+        # Get the parent campaign
+        campaign_name = ad_set.campaign
+        if not campaign_name:
+            return {
+                "success": False,
+                "error_message": "Parent campaign is not set for this ad set"
+            }
+        
+        # Get the Marketing Campaign document to find account integration
+        marketing_campaign = frappe.get_doc("Marketing Campaign", campaign_name)
+        
+        # Validate that Meta Ads is enabled for the parent campaign
+        if not getattr(marketing_campaign, "custom_is_meta_ads", False):
+            return {
+                "success": False,
+                "error_message": "Parent campaign does not have Meta Ads enabled"
+            }
+        
+        # Get the Meta Ad Set ID
+        meta_adset_id = getattr(ad_set, "adset_id", None)
+        if not meta_adset_id:
+            return {
+                "success": False,
+                "error_message": "No Ad Set ID found. Please create the ad set first."
+            }
+        
+        # Get the Ad Account Integration to initialize provider
+        ad_account_name = getattr(marketing_campaign, "custom_select_facebook_ad_account", None)
+        if not ad_account_name:
+            return {
+                "success": False,
+                "error_message": "Ad Account is not selected"
+            }
+        
+        # Verify the integration exists and is connected
+        integration_doc = frappe.get_doc("Ads Account Integration", ad_account_name)
+        if not integration_doc.enabled or integration_doc.connection_status != "Connected":
+            return {
+                "success": False,
+                "error_message": "Ad Account Integration is not connected or enabled"
+            }
+        
+        logger.info(f"Ad Set Meta ID: {meta_adset_id}")
+        logger.info(f"Parent Campaign: {campaign_name}")
+        logger.info(f"Ad Account: {ad_account_name}")
+        
+        # Initialize MetaAdsProvider with the integration
+        provider = MetaAdsProvider(ad_account_name)
+        logger.info(f"Provider initialized with account ID: {provider.account_id}")
+        
+        # Fetch ad set-level analytics from Meta API
+        logger.info(f"Calling fetch_adset_analytics for ad set {meta_adset_id}...")
+        result = provider.fetch_adset_analytics(meta_adset_id)
+        
+        logger.info(f"API call completed. Success: {result.success}")
+        
+        if not result.success:
+            logger.warning(f"Ad set analytics fetch failed: {result.error_message}")
+            return {
+                "success": False,
+                "error_message": result.error_message or "No analytics data available",
+                "message": "📊 No Analytics Available",
+                "details": f"Ad Set '{ad_set.name}' does not have analytics data yet.\n\n"
+                          f"This could happen because:\n"
+                          f"• Ad set was just created\n"
+                          f"• No impressions or activity yet\n"
+                          f"• Data is still being processed by Meta\n\n"
+                          f"Please try again later."
+            }
+        
+        logger.info(f"Successfully fetched metrics. Keys: {list(result.metrics.keys())}")
+        
+        # Check if ad set analytics document already exists
+        existing_analytics = frappe.get_list(
+            "Ad Set Analytics",
+            filters={
+                "ad_set": adset_id,
+                "ads_account_integration": ad_account_name
+            },
+            limit_page_length=1
+        )
+        
+        metrics = result.metrics
+        
+        # Update existing or create new
+        if existing_analytics:
+            # Update existing document
+            ad_set_analytics = frappe.get_doc("Ad Set Analytics", existing_analytics[0].name)
+            logger.info(f"Updating existing ad set analytics document: {ad_set_analytics.name}")
+        else:
+            # Create new document
+            ad_set_analytics = frappe.new_doc("Ad Set Analytics")
+            ad_set_analytics.ad_set = adset_id
+            ad_set_analytics.campaign = campaign_name
+            ad_set_analytics.ads_account_integration = ad_account_name
+            ad_set_analytics.meta_adset_id = meta_adset_id
+            logger.info(f"Creating new ad set analytics document")
+        
+        # Update fields (works for both new and existing)
+        ad_set_analytics.analytics_date = today()
+        ad_set_analytics.last_synced = now_datetime()
+        ad_set_analytics.sync_status = "Success"
+        
+        # Ad Set-level metrics from Meta API
+        ad_set_analytics.spend = float(metrics.get("spend", 0) or 0)
+        ad_set_analytics.impressions = int(metrics.get("impressions", 0) or 0)
+        ad_set_analytics.clicks = int(metrics.get("clicks", 0) or 0)
+        ad_set_analytics.ctr = float(metrics.get("ctr", 0) or 0)
+        ad_set_analytics.cpc = float(metrics.get("cpc", 0) or 0)
+        ad_set_analytics.reach = int(metrics.get("reach", 0) or 0)
+        ad_set_analytics.frequency = float(metrics.get("frequency", 0) or 0)
+        
+        # Action metrics
+        ad_set_analytics.actions_count = int(metrics.get("actions", 0) or 0)
+        ad_set_analytics.action_rate = float(metrics.get("action_rate", 0) or 0)
+        ad_set_analytics.cost_per_action = float(metrics.get("cost_per_action", 0) or 0)
+        
+        # Conversion metrics
+        ad_set_analytics.conversions = int(metrics.get("conversions", 0) or 0)
+        ad_set_analytics.conversion_rate = float(metrics.get("conversion_rate", 0) or 0)
+        ad_set_analytics.cost_per_conversion = float(metrics.get("cost_per_conversion", 0) or 0)
+        
+        # ROAS metrics
+        ad_set_analytics.purchase_roas = float(metrics.get("purchase_roas", 0) or 0)
+        
+        # Video metrics (if applicable)
+        ad_set_analytics.video_views = int(metrics.get("video_views", 0) or 0)
+        ad_set_analytics.inline_link_clicks = int(metrics.get("inline_link_clicks", 0) or 0)
+        ad_set_analytics.outbound_clicks = int(metrics.get("outbound_clicks", 0) or 0)
+        
+        # Store raw metrics as JSON for reference
+        ad_set_analytics.raw_metrics = json.dumps(metrics, indent=2)
+        ad_set_analytics.notes = f"Ad Set-level analytics fetched from Meta API. Last 7 days aggregated data."
+        
+        # Save the analytics document
+        ad_set_analytics.save(ignore_permissions=True)
+        frappe.db.commit()
+        
+        logger.info(f"Ad set analytics saved successfully: {ad_set_analytics.name}")
+        
+        return {
+            "success": True,
+            "analytics_doc": ad_set_analytics.name,
+            "metrics": metrics,
+            "message": f"Ad Set analytics fetched successfully for {ad_set.name}"
+        }
+        
+    except frappe.DoesNotExistError as e:
+        logger.error(f"Document not found: {str(e)}")
+        return {
+            "success": False,
+            "error_message": f"Document not found: {str(e)}"
+        }
+    except Exception as e:
+        logger.exception(f"Error fetching ad set analytics")
+        frappe.log_error(
+            message=f"Ad Set: {adset_id}\nError: {str(e)}",
+            title="Ad Set Analytics Fetch Error"
+        )
+        return {
+            "success": False,
+            "error_message": f"Error fetching ad set analytics: {str(e)}"
+        }
 
 @frappe.whitelist()
 def get_ads_analytics_summary(integration_name: str, days: int = 7) -> dict:

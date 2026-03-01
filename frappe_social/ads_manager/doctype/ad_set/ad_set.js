@@ -1,212 +1,410 @@
-// Copyright (c) 2026, Abhishek and contributors
-// For license information, please see license.txt
-
-const OBJECTIVE_TO_PERFORMANCE_GOALS = {
-    "Awareness": [
-        "Maximise reach of ads", "Maximise number of impression",
-        "Maximise ad recall lift", "Maximise ThruPlay views",
-        "Maximise 2-second continuous video plays",
-    ],
-    "Traffic": [
-        "Maximise number of link clicks", "Maximise number of landing page views",
-        "Maximise daily unique reach", "Maximise number of conversations",
-        "Maximise number of calls", "Maximise number of Instagram profile visits",
-        "Maximise number of impressions",
-    ],
-    "Engagement": [
-        "Maximise engagement with a post", "Maximise number of Page likes",
-        "Maximise number of event responses", "Maximise daily unique reach",
-        "Maximise number of Instagram profile visits", "Maximise number of calls",
-        "Maximise reminders set", "Maximise number of conversations",
-        "Maximise ThruPlay views", "Maximise 2-second continuous video plays",
-    ],
-    "Leads": [
-        "Maximise number of leads", "Maximise number of conversion leads",
-        "Maximise number of leads through messaging",
-    ],
-    "Sales": ["Maximise value of conversions", "Maximise number of app events"],
-    "App promotion": ["Maximise number of app installs", "Maximise number of app events"],
-};
-
-// Mirror of PERFORMANCE_TO_OPTIMIZATION in meta_mappings.py
-const PERFORMANCE_TO_OPTIMIZATION = {
-    "Maximise reach of ads": "REACH",
-    "Maximise number of impression": "IMPRESSIONS",
-    "Maximise number of impressions": "IMPRESSIONS",
-    "Maximise ad recall lift": "AD_RECALL_LIFT",
-    "Maximise ThruPlay views": "THRUPLAY",
-    "Maximise 2-second continuous video plays": "TWO_SECOND_CONTINUOUS_VIDEO_VIEWS",
-    "Maximise number of link clicks": "LINK_CLICKS",
-    "Maximise number of landing page views": "LANDING_PAGE_VIEWS",
-    "Maximise daily unique reach": "REACH",
-    "Maximise number of conversations": "CONVERSATIONS",
-    "Maximise number of Instagram profile visits": "VISIT_INSTAGRAM_PROFILE",
-    "Maximise number of calls": "QUALITY_CALL",
-    "Maximise engagement with a post": "POST_ENGAGEMENT",
-    "Maximise number of event responses": "EVENT_RESPONSES",
-    "Maximise number of app events": "OFFSITE_CONVERSIONS",
-    "Maximise reminders set": "REMINDERS_SET",
-    "Maximise number of Page likes": "PAGE_LIKES",
-    "Maximise number of leads": "LEAD_GENERATION",
-    "Maximise number of conversion leads": "QUALITY_LEAD",
-    "Maximise number of leads through messaging": "LEAD_GENERATION",
-    "Maximise number of app installs": "APP_INSTALLS",
-    "Maximise value of conversions": "VALUE",
-};
-
 frappe.ui.form.on('Ad Set', {
+    refresh: function (frm) {
+        // Add "Create on Meta" button for saved but not yet created ad sets
+        if (!frm.is_new()) {
+            if (!frm.doc.adset_id) {
+                frm.add_custom_button(__('Create on Meta'), function () {
+                    frm.trigger('create_ad_set_on_meta');
+                }, __('Actions'));
+            } else {
+                frm.add_custom_button(__('View on Meta'), function () {
+                    const adset_id = frm.doc.adset_id;
+                    frappe.msgprint({
+                        title: __('Meta Ad Set Details'),
+                        message: __('Ad Set ID: <strong>{0}</strong><br><br><a href="https://business.facebook.com/ads/manager" target="_blank">View in Meta Ads Manager →</a>', [adset_id]),
+                        indicator: 'blue'
+                    });
+                }, __('Actions'));
+            }
 
-    refresh(frm) {
+            frm.add_custom_button(__('Fetch Analytics'), function () {
+                frm.trigger('fetch_ad_set_analytics');
+            }, __('Actions'));
+        }
+
+        // Set campaign filter based on Meta Ads selection
+        frm.set_df_property('campaign', 'filters', {
+            'custom_is_meta_ads': 1
+        });
+
+        toggle_status_fields(frm);
+        toggle_budget_section_visibility(frm);
+    },
+
+    campaign: function (frm) {
+        /**
+         * When campaign changes, update budget section visibility
+         * based on campaign's CBO (Campaign Budget Optimization) setting
+         */
+        if (frm.doc.campaign) {
+            frappe.call({
+                method: 'frappe.client.get',
+                args: {
+                    doctype: 'Marketing Campaign',
+                    name: frm.doc.campaign
+                },
+                callback: function (r) {
+                    if (r.message) {
+                        const campaign = r.message;
+                        const has_cbo = campaign.custom_enable_adset_budget_sharing;
+
+                        if (has_cbo) {
+                            frappe.msgprint({
+                                title: __('📊 Campaign Budget Optimization'),
+                                message: __('This campaign has <b>CBO enabled</b>.<br>Budget is managed at campaign level.<br>Ad Set budget fields will be hidden.'),
+                                indicator: 'blue'
+                            });
+                        } else {
+                            frappe.msgprint({
+                                title: __('💰 Ad Set Budget Required'),
+                                message: __('This campaign has <b>CBO disabled</b>.<br>You must set the budget at Ad Set level.'),
+                                indicator: 'orange'
+                            });
+                        }
+
+                        toggle_budget_section_visibility(frm);
+                    }
+                }
+            });
+        }
+    },
+
+    before_save: function (frm) {
+        console.log('[AdSet JS] Before save - is_new:', frm.is_new(), 'enable_ad_set:', frm.doc.enable_ad_set, 'adset_id:', frm.doc.adset_id);
+
+        // If creating new ad set, validate required fields
+        if (frm.is_new()) {
+            console.log('[AdSet JS] Validating Ad Set creation fields...');
+
+            if (!frm.doc.ad_set_name) {
+                frappe.throw(__("Ad Set Name is required"));
+            }
+            if (!frm.doc.campaign) {
+                frappe.throw(__("Campaign is required"));
+            }
+            if (!frm.doc.billing_event) {
+                frappe.throw(__("Billing Event is required"));
+            }
+            if (!frm.doc.performance_goal) {
+                frappe.throw(__("Optimization Goal is required"));
+            }
+            // if (!frm.doc.budget_type_dailylifetime) {
+            //     frappe.throw(__("Budget Type is required"));
+            // }
+
+            // Validate budget only if campaign doesn't have CBO
+            frappe.call({
+                method: 'frappe.client.get',
+                args: {
+                    doctype: 'Marketing Campaign',
+                    name: frm.doc.campaign
+                },
+                async: false,
+                callback: function (r) {
+                    if (r.message) {
+                        const has_cbo = r.message.custom_enable_adset_budget_sharing;
+                        if (!has_cbo && (!frm.doc.amount || frm.doc.amount <= 0)) {
+                            frappe.throw(__("Ad Set Amount is required and must be greater than 0 (Campaign Budget Optimization is disabled)"));
+                        }
+                    }
+                }
+            });
+
+            console.log('[AdSet JS] All validations passed, proceeding with Meta Ad Set creation...');
+        }
+    },
+
+    after_save: function (frm) {
+        console.log('[AdSet JS] After save - adset_id:', frm.doc.adset_id);
         if (frm.doc.adset_id) {
-            frm.set_df_property('adset_id', 'description',
-                `✓ Ad Set created on Meta: ${frm.doc.adset_id}`);
-            frm.set_df_property('adset_id', 'read_only', 1);
-        }
-        if (frm.doc.campaign) {
-            load_performance_goals(frm);
-        }
-        _toggle_end_date_required(frm);
-    },
-
-    onload(frm) {
-        frm.set_query('campaign', () => ({
-            filters: { 'custom_is_meta_ads': 1 }
-        }));
-    },
-
-    campaign(frm) {
-        if (frm.doc.campaign) {
-            load_performance_goals(frm);
-        } else {
-            frm.set_value('performance_goal', '');
-            frm.set_df_property('performance_goal', 'options', 'None');
+            frappe.show_alert({
+                message: __('✅ Ad Set created on Meta! ID: ' + frm.doc.adset_id),
+                indicator: 'green'
+            }, 5);
         }
     },
 
-    // ── Budget sync ────────────────────────────────────────────────────────
-    amount(frm) {
-        _sync_budget(frm);
+    enable_ad_set: function (frm) {
+        toggle_status_fields(frm);
     },
 
-    budget_type_dailylifetime(frm) {
-        _sync_budget(frm);
-        _toggle_end_date_required(frm);
-    },
+    create_ad_set_on_meta: function (frm) {
+        /**
+         * Create Ad Set on Meta without automatic Frappe save
+         * Validates all required fields before sending to Meta
+         */
+        if (frm.is_new()) {
+            frappe.throw(__('Please save the Ad Set in Frappe before creating it on Meta.'));
+        }
 
-    // ── Validation ────────────────────────────────────────────────────────
-    validate(frm) {
         if (!frm.doc.campaign) {
-            frappe.throw(__('Please select a Campaign'));
+            frappe.throw(__('Campaign is required'));
         }
         if (!frm.doc.ad_set_name) {
             frappe.throw(__('Ad Set Name is required'));
         }
-        if (!frm.doc.performance_goal || frm.doc.performance_goal === 'None') {
-            frappe.throw(__('Performance Goal is required'));
+        if (!frm.doc.billing_event) {
+            frappe.throw(__('Billing Event is required'));
         }
-        if (!frm.doc.amount && !frm.doc.daily_budget && !frm.doc.lifetime_budget) {
-            frappe.throw(__('Either Daily Budget or Lifetime Budget is required'));
-        }
-        if (frm.doc.budget_type_dailylifetime === 'Lifetime Budget' && !frm.doc.end_date_and_time) {
-            frappe.throw(__('End Date and Time is required for Lifetime Budget'));
+        if (!frm.doc.performance_goal) {
+            frappe.throw(__('Optimization Goal is required'));
         }
 
-        // ── Frequency Control ──────────────────────────────────────────────
-        const opt_goal = _get_optimization_goal(frm);
-
-        if (frm.doc.frequency_control && ['REACH', 'THRUPLAY'].includes(opt_goal)) {
-            // cint() is a Frappe global — DO NOT use frappe.utils.cint (doesn't exist)
-            // Also read directly from the rendered field as a fallback for pre-migration
-            const freq_field = frm.get_field('max_frequency');
-            const interval_field = frm.get_field('frequency_interval_days');
-
-            const max_freq = cint(frm.doc.max_frequency)
-                || (freq_field ? cint(freq_field.get_value()) : 0);
-
-            const interval = cint(frm.doc.frequency_interval_days)
-                || (interval_field ? cint(interval_field.get_value()) : 0)
-                || 7;
-
-            if (!max_freq) {
-                frappe.throw(__('Max Frequency is required when Frequency Control is set'));
+        // Validate budget based on campaign's CBO setting
+        frappe.call({
+            method: 'frappe.client.get',
+            args: {
+                doctype: 'Marketing Campaign',
+                name: frm.doc.campaign
+            },
+            async: false,
+            callback: function (r) {
+                if (r.message) {
+                    const has_cbo = r.message.custom_enable_adset_budget_sharing;
+                    if (!has_cbo && (!frm.doc.amount || frm.doc.amount <= 0)) {
+                        frappe.throw(__("Ad Set Amount is required and must be greater than 0 (Campaign Budget Optimization is disabled)"));
+                    }
+                }
             }
-            if (max_freq < 1 || max_freq > 90) {
-                frappe.throw(__('Max Frequency must be between 1 and 90 (got ' + max_freq + ')'));
-            }
-            if (interval < 1 || interval > 90) {
-                frappe.throw(__('Frequency Interval Days must be between 1 and 90 (got ' + interval + ')'));
-            }
+        });
 
-            // Sync resolved values back so the server receives them correctly
-            frm.set_value('max_frequency', max_freq);
-            frm.set_value('frequency_interval_days', interval);
-        }
+        // Call backend to create on Meta
+        frappe.call({
+            method: 'frappe_social.ads_manager.doctype.ad_set.ad_set.create_ad_set_on_meta_async',
+            args: {
+                ad_set_name: frm.doc.name
+            },
+            freeze: true,
+            freeze_message: __('Creating Ad Set on Meta...'),
+            callback: function (r) {
+                if (r.message) {
+                    const response = r.message;
+
+                    if (response.success) {
+                        const adset_id = response.adset_id || __('N/A');
+                        frappe.show_alert({
+                            message: __('✅ Ad Set created on Meta! ID: ' + adset_id),
+                            indicator: 'green'
+                        }, 5);
+                        // Reload the form to show the new adset_id
+                        frm.reload_doc();
+                        return;
+                    }
+
+                    frappe.show_alert({
+                        message: response.message || __('Ad Set creation did not complete.'),
+                        indicator: 'orange'
+                    }, 5);
+
+                    if (response.error_message) {
+                        frappe.msgprint({
+                            title: __('Meta Ad Set Creation Error'),
+                            message: response.error_message,
+                            indicator: 'orange'
+                        });
+                    }
+                }
+            },
+            error: function (err) {
+                let error_message = __('Error creating Ad Set on Meta. Please try again.');
+
+                const response_json = err && err.responseJSON ? err.responseJSON : null;
+                const server_error = (err && err.message)
+                    || (response_json && response_json.exception)
+                    || (response_json && response_json.message);
+
+                if (server_error) {
+                    error_message = server_error;
+                }
+
+                frappe.msgprint({
+                    title: __('Meta Ad Set Creation Failed'),
+                    message: error_message,
+                    indicator: 'red'
+                });
+
+                frappe.show_alert({
+                    message: __('Ad Set creation failed.'),
+                    indicator: 'red'
+                }, 5);
+            }
+        });
     },
 
-    before_save(frm) {
-        _sync_budget(frm);
-
-        if (frm.is_new()) {
+    fetch_ad_set_analytics: function (frm) {
+        if (!frm.doc.adset_id) {
             frappe.show_alert({
-                message: __('Creating ad set on Meta Ads...'),
-                indicator: 'blue'
+                message: __('Ad Set has not been created on Meta Ads yet'),
+                indicator: 'orange'
             });
+            return;
         }
-    },
 
+        frappe.call({
+            method: 'frappe_social.ads_manager.api.analytics.get_adset_analytics',
+            args: { adset_id: frm.doc.name },
+            freeze: true,
+            freeze_message: __('Fetching analytics from Meta...'),
+            callback: function (r) {
+                if (r.message) {
+                    if (r.message.success) {
+                        frappe.show_alert({
+                            message: __('✓ Analytics fetched successfully!'),
+                            indicator: 'green'
+                        }, 3);
+
+                        if (r.message.metrics) {
+                            show_adset_analytics_summary(r.message.metrics, r.message.analytics_doc);
+                        }
+                    } else {
+                        const message = r.message.message || __('Analytics Not Available');
+                        const details = r.message.details || r.message.error_message || __('No data available');
+
+                        frappe.show_alert({
+                            message: message,
+                            indicator: 'orange'
+                        }, 5);
+
+                        frappe.msgprint({
+                            title: __('📊 No Ad Set Analytics'),
+                            message: details,
+                            indicator: 'orange'
+                        });
+                    }
+                }
+            },
+            error: function (err) {
+                frappe.show_alert({
+                    message: __('Error fetching analytics. Please try again.'),
+                    indicator: 'red'
+                });
+                console.error(err);
+            }
+        });
+    }
 });
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+function show_adset_analytics_summary(metrics, analytics_doc) {
+    /**
+     * Display ad set analytics in a formatted dialog
+     */
+    const html = `
+        <div style="padding: 20px;">
+            <h5>📊 Ad Set Performance (Last 7 Days)</h5>
+            
+            <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+                <tr style="border-bottom: 1px solid #ddd;">
+                    <td style="padding: 8px; font-weight: bold;">Metric</td>
+                    <td style="padding: 8px; text-align: right; font-weight: bold;">Value</td>
+                </tr>
+                
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 8px;">💰 Spend</td>
+                    <td style="padding: 8px; text-align: right;">₹${(metrics.spend || 0).toFixed(2)}</td>
+                </tr>
+                
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 8px;">👁️ Impressions</td>
+                    <td style="padding: 8px; text-align: right;">${(metrics.impressions || 0).toLocaleString()}</td>
+                </tr>
+                
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 8px;">🖱️ Clicks</td>
+                    <td style="padding: 8px; text-align: right;">${(metrics.clicks || 0).toLocaleString()}</td>
+                </tr>
+                
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 8px;">📈 CTR</td>
+                    <td style="padding: 8px; text-align: right;">${(metrics.ctr || 0).toFixed(2)}%</td>
+                </tr>
+                
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 8px;">💵 CPC</td>
+                    <td style="padding: 8px; text-align: right;">₹${(metrics.cpc || 0).toFixed(2)}</td>
+                </tr>
+                
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 8px;">📡 Reach</td>
+                    <td style="padding: 8px; text-align: right;">${(metrics.reach || 0).toLocaleString()}</td>
+                </tr>
+                
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 8px;">🔄 Frequency</td>
+                    <td style="padding: 8px; text-align: right;">${(metrics.frequency || 0).toFixed(2)}</td>
+                </tr>
+                
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 8px;">✅ Conversions</td>
+                    <td style="padding: 8px; text-align: right;">${(metrics.conversions || 0).toLocaleString()}</td>
+                </tr>
+                
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 8px;">💹 ROAS</td>
+                    <td style="padding: 8px; text-align: right;">${(metrics.purchase_roas || 0).toFixed(2)}x</td>
+                </tr>
+            </table>
+            
+            <p style="color: #888; font-size: 12px; margin-top: 20px;">
+                📌 Analytics saved in: <strong>${analytics_doc || 'New document'}</strong>
+            </p>
+        </div>
+    `;
 
-function _sync_budget(frm) {
-    const amount = frm.doc.amount || 0;
-    const type = frm.doc.budget_type_dailylifetime || 'Daily Budget';
+    frappe.msgprint({
+        title: __('📊 Ad Set Analytics'),
+        message: html,
+        indicator: 'green'
+    });
+}
 
-    if (type === 'Lifetime Budget') {
-        frm.set_value('lifetime_budget', amount);
-        frm.set_value('daily_budget', null);
-    } else {
-        frm.set_value('daily_budget', amount);
-        frm.set_value('lifetime_budget', null);
+function toggle_status_fields(frm) {
+    const is_enabled = frm.doc.enable_ad_set;
+    if (!is_enabled) {
+        frm.set_value('status', 'PAUSED');
     }
 }
 
-function _toggle_end_date_required(frm) {
-    const is_lifetime = frm.doc.budget_type_dailylifetime === 'Lifetime Budget';
-    frm.set_df_property('end_date_and_time', 'reqd', is_lifetime ? 1 : 0);
-    frm.set_df_property('end_date_and_time', 'bold', is_lifetime ? 1 : 0);
-}
+function toggle_budget_section_visibility(frm) {
+    /**
+     * Show/hide budget section based on campaign's CBO setting
+     * 
+     * CBO = Campaign Budget Optimization (custom_enable_adset_budget_sharing)
+     * 
+     * If Campaign has CBO ON (custom_enable_adset_budget_sharing=1):
+     *   → Budget is managed at campaign level
+     *   → Hide budget section in Ad Set form
+     * 
+     * If Campaign has CBO OFF (custom_enable_adset_budget_sharing=0):
+     *   → Budget MUST be at ad set level
+     *   → Show budget section in Ad Set form
+     */
+    if (!frm.doc.campaign) {
+        // No campaign selected, show budget section (user will select campaign)
+        frm.set_df_property('section_break_aixe', 'hidden', 0);
+        frm.refresh_field('section_break_aixe');
+        console.log('[AdSet JS] No campaign selected - Budget section VISIBLE');
+        return;
+    }
 
-function _get_optimization_goal(frm) {
-    return PERFORMANCE_TO_OPTIMIZATION[frm.doc.performance_goal] || '';
-}
-
-function load_performance_goals(frm) {
     frappe.call({
-        method: 'frappe_social.ads_manager.mappings.meta_mappings.get_performance_goals_for_objective',
-        args: { campaign: frm.doc.campaign },
+        method: 'frappe.client.get',
+        args: {
+            doctype: 'Marketing Campaign',
+            name: frm.doc.campaign
+        },
         callback: function (r) {
-            if (!r.message || !r.message.goals.length) {
-                frappe.show_alert({
-                    message: __('No performance goals found for this campaign objective.'),
-                    indicator: 'orange'
-                });
-                return;
-            }
-            const { objective, goals } = r.message;
-            frm.set_df_property('performance_goal', 'options', ['', ...goals].join('\n'));
+            if (r.message) {
+                const campaign = r.message;
+                const has_cbo = campaign.custom_enable_adset_budget_sharing;
 
-            if (frm.doc.performance_goal && !goals.includes(frm.doc.performance_goal)) {
-                frm.set_value('performance_goal', '');
-                frappe.show_alert({
-                    message: __(`Performance Goal reset — choose one for "${objective}"`),
-                    indicator: 'orange'
-                });
+                // Show budget section if CBO is disabled (budget required at ad set level)
+                const should_hide = has_cbo ? 1 : 0;
+                frm.set_df_property('section_break_aixe', 'hidden', should_hide);
+                frm.refresh_field('section_break_aixe');
+
+                console.log(`[AdSet JS] Campaign: ${campaign.name} | CBO: ${has_cbo} | Budget section: ${should_hide ? 'HIDDEN' : 'VISIBLE'}`);
             }
-            frappe.show_alert({
-                message: __(`${goals.length} goals loaded for "${objective}"`),
-                indicator: 'green'
-            });
         }
     });
 }
+

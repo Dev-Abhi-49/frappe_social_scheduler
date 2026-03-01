@@ -1,104 +1,104 @@
 {
- "charts": [],
- "content": "[{\"id\":\"heading\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Post Manager</span>\",\"col\":12}},{\"id\":\"eYKIaesELT\",\"type\":\"paragraph\",\"data\":{\"text\":\"<span class=\\\"h6\\\" style=\\\"font-weight: normal;\\\"><i>We implemented only 3 platforms. Next month we come up with more platform........!</i></span>\",\"col\":12}},{\"id\":\"shortcuts3\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Social Settings\",\"col\":4}},{\"id\":\"shortcuts2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Social Integration\",\"col\":4}},{\"id\":\"Iy3AQ5zR3w\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Marketing Campaign\",\"col\":4}},{\"id\":\"shortcuts\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Social Post\",\"col\":4}},{\"id\":\"spacer\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"heading2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Analytics</span>\",\"col\":12}},{\"id\":\"shortcuts4\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Social Analytics\",\"col\":6}},{\"id\":\"shortcuts5\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Social Post Analytics\",\"col\":6}},{\"id\":\"spacer2\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"heading3\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Reports</span>\",\"col\":12}},{\"id\":\"shortcuts6\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Post Performance\",\"col\":4}},{\"id\":\"shortcuts7\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Account Growth\",\"col\":4}},{\"id\":\"shortcuts8\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Publishing Summary\",\"col\":4}}]",
- "creation": "2024-12-05 10:00:00",
- "custom_blocks": [],
- "docstatus": 0,
- "doctype": "Workspace",
- "for_user": "",
- "hide_custom": 0,
- "icon": "upload",
- "idx": 0,
- "indicator_color": "",
- "is_hidden": 0,
- "label": "Post Manage",
- "links": [],
- "modified": "2026-02-25 15:25:52.743871",
- "modified_by": "Administrator",
- "module": "Frappe Social",
- "name": "Post Manage",
- "number_cards": [],
- "owner": "Administrator",
- "parent_page": "",
- "public": 1,
- "quick_lists": [],
- "restrict_to_domain": "",
- "roles": [
-  {
-   "role": "Scheduler"
-  },
-  {
-   "role": "Administrator"
-  }
- ],
- "sequence_id": 1.0,
- "shortcuts": [
-  {
-   "color": "#ffffff",
-   "doc_view": "List",
-   "label": "Social Post",
-   "link_to": "Social Post",
-   "stats_filter": "[]",
-   "type": "DocType"
-  },
-  {
-   "color": "#ffffff",
-   "doc_view": "List",
-   "label": "Social Integration",
-   "link_to": "Social Integration",
-   "stats_filter": "[]",
-   "type": "DocType"
-  },
-  {
-   "color": "#ffffff",
-   "doc_view": "List",
-   "label": "Marketing Campaign",
-   "link_to": "Marketing Campaign",
-   "stats_filter": "[]",
-   "type": "DocType"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "",
-   "label": "Social Settings",
-   "link_to": "Social Settings",
-   "type": "DocType"
-  },
-  {
-   "color": "Yellow",
-   "doc_view": "List",
-   "label": "Social Analytics",
-   "link_to": "Social Analytics",
-   "type": "DocType"
-  },
-  {
-   "color": "Orange",
-   "doc_view": "List",
-   "label": "Social Post Analytics",
-   "link_to": "Social Post Analytics",
-   "type": "DocType"
-  },
-  {
-   "color": "Cyan",
-   "label": "Post Performance",
-   "link_to": "Post Performance",
-   "report_ref_doctype": "Social Post",
-   "type": "Report"
-  },
-  {
-   "color": "Purple",
-   "label": "Account Growth",
-   "link_to": "Account Growth",
-   "report_ref_doctype": "Social Analytics",
-   "type": "Report"
-  },
-  {
-   "color": "Pink",
-   "label": "Publishing Summary",
-   "link_to": "Publishing Summary",
-   "report_ref_doctype": "Social Post",
-   "type": "Report"
-  }
- ],
- "title": "Post Manage"
+    "charts": [],
+    "content": "[{\"id\":\"heading\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Post Manager</span>\",\"col\":12}},{\"id\":\"eYKIaesELT\",\"type\":\"paragraph\",\"data\":{\"text\":\"<span class=\\\"h6\\\" style=\\\"font-weight: normal;\\\"><i>We implemented only 3 platforms. Next month we come up with more platform........!</i></span>\",\"col\":12}},{\"id\":\"shortcuts3\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Social Settings\",\"col\":4}},{\"id\":\"shortcuts2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Social Integration\",\"col\":4}},{\"id\":\"Iy3AQ5zR3w\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Marketing Campaign\",\"col\":4}},{\"id\":\"shortcuts\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Social Post\",\"col\":4}},{\"id\":\"spacer\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"heading2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Analytics</span>\",\"col\":12}},{\"id\":\"shortcuts4\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Social Analytics\",\"col\":6}},{\"id\":\"shortcuts5\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Social Post Analytics\",\"col\":6}},{\"id\":\"spacer2\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"heading3\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Reports</span>\",\"col\":12}},{\"id\":\"shortcuts6\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Post Performance\",\"col\":4}},{\"id\":\"shortcuts7\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Account Growth\",\"col\":4}},{\"id\":\"shortcuts8\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Publishing Summary\",\"col\":4}}]",
+    "creation": "2024-12-05 10:00:00",
+    "custom_blocks": [],
+    "docstatus": 0,
+    "doctype": "Workspace",
+    "for_user": "",
+    "hide_custom": 0,
+    "icon": "upload",
+    "idx": 0,
+    "indicator_color": "",
+    "is_hidden": 0,
+    "label": "Post Manage",
+    "links": [],
+    "modified": "2026-02-25 15:25:52.743871",
+    "modified_by": "Administrator",
+    "module": "Frappe Social",
+    "name": "Post Manage",
+    "number_cards": [],
+    "owner": "Administrator",
+    "parent_page": "",
+    "public": 1,
+    "quick_lists": [],
+    "restrict_to_domain": "",
+    "roles": [
+        {
+            "role": "Scheduler"
+        },
+        {
+            "role": "Administrator"
+        }
+    ],
+    "sequence_id": 1.0,
+    "shortcuts": [
+        {
+            "color": "#ffffff",
+            "doc_view": "List",
+            "label": "Social Post",
+            "link_to": "Social Post",
+            "stats_filter": "[]",
+            "type": "DocType"
+        },
+        {
+            "color": "#ffffff",
+            "doc_view": "List",
+            "label": "Social Integration",
+            "link_to": "Social Integration",
+            "stats_filter": "[]",
+            "type": "DocType"
+        },
+        {
+            "color": "#ffffff",
+            "doc_view": "List",
+            "label": "Marketing Campaign",
+            "link_to": "Marketing Campaign",
+            "stats_filter": "[]",
+            "type": "DocType"
+        },
+        {
+            "color": "Grey",
+            "doc_view": "List",
+            "label": "Social Settings",
+            "link_to": "Social Settings",
+            "type": "DocType"
+        },
+        {
+            "color": "Yellow",
+            "doc_view": "List",
+            "label": "Social Analytics",
+            "link_to": "Social Analytics",
+            "type": "DocType"
+        },
+        {
+            "color": "Orange",
+            "doc_view": "List",
+            "label": "Social Post Analytics",
+            "link_to": "Social Post Analytics",
+            "type": "DocType"
+        },
+        {
+            "color": "Cyan",
+            "label": "Post Performance",
+            "link_to": "Post Performance",
+            "report_ref_doctype": "Social Post",
+            "type": "Report"
+        },
+        {
+            "color": "Purple",
+            "label": "Account Growth",
+            "link_to": "Account Growth",
+            "report_ref_doctype": "Social Analytics",
+            "type": "Report"
+        },
+        {
+            "color": "Pink",
+            "label": "Publishing Summary",
+            "link_to": "Publishing Summary",
+            "report_ref_doctype": "Social Post",
+            "type": "Report"
+        }
+    ],
+    "title": "Post Manage"
 }

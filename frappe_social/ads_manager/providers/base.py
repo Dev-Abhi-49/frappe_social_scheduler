@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class PublishResult:
     success: bool
+    adlabel_ids: Optional[List[str]] = None
     campaign_id: Optional[str] = None
     url: Optional[str] = None
     error_message: Optional[str] = None

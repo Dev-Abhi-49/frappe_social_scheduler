@@ -1,266 +1,304 @@
 {
-    "actions": [],
-    "allow_rename": 1,
-    "creation": "2026-01-08 12:10:17.994310",
-    "doctype": "DocType",
-    "engine": "InnoDB",
-    "field_order": [
-        "basic_information_section",
-        "creative_name",
-        "column_break_yifc",
-        "ad_account",
-        "section_break_fxgh",
-        "select_facebook_page",
-        "column_break_qhks",
-        "select_threads_account",
-        "select_instagram_account",
-        "ad_setup_section",
-        "select_ad_type",
-        "format",
-        "column_break_sbga",
-        "multi_advertiser_ads",
-        "selected_post_id",
-        "section_break_vsyz",
-        "destination",
-        "website_url",
-        "column_break_sjrx",
-        "display_link",
-        "browser_addons",
-        "section_break_ymlk",
-        "medi",
-        "media",
-        "section_break_srzw",
-        "flexible_media",
-        "column_break_niab",
-        "add_music",
-        "section_break_ymho",
-        "primary_text",
-        "column_break_fvtp",
-        "add_a_destination",
-        "headline",
-        "description",
-        "call_to_action",
-        "section_break_jmop",
-        "creative_id"
-    ],
-    "fields": [
-        {
-            "fieldname": "call_to_action",
-            "fieldtype": "Select",
-            "label": "Call To Action",
-            "options": "Learn More\nShop Now\nSign Up"
-        },
-        {
-            "fieldname": "creative_id",
-            "fieldtype": "Data",
-            "label": "Creative ID",
-            "read_only": 1
-        },
-        {
-            "fieldname": "basic_information_section",
-            "fieldtype": "Section Break",
-            "label": "Basic Information"
-        },
-        {
-            "fieldname": "column_break_yifc",
-            "fieldtype": "Column Break"
-        },
-        {
-            "fieldname": "section_break_vsyz",
-            "fieldtype": "Section Break",
-            "label": "Destination"
-        },
-        {
-            "fieldname": "column_break_sjrx",
-            "fieldtype": "Column Break"
-        },
-        {
-            "fieldname": "ad_setup_section",
-            "fieldtype": "Section Break",
-            "label": "Ad setup"
-        },
-        {
-            "fieldname": "select_ad_type",
-            "fieldtype": "Select",
-            "label": "Select Ad Type",
-            "options": "Create ad\nUse existing post\nUse Creative Hub mockup"
-        },
-        {
-            "default": "0",
-            "fieldname": "multi_advertiser_ads",
-            "fieldtype": "Check",
-            "label": "Multi-advertiser ads"
-        },
-        {
-            "fieldname": "selected_post_id",
-            "fieldtype": "Data",
-            "label": "Selected Post ID",
-            "hidden": 1,
-            "read_only": 1
-        },
-        {
-            "fieldname": "column_break_sbga",
-            "fieldtype": "Column Break"
-        },
-        {
-            "default": "Website",
-            "fieldname": "destination",
-            "fieldtype": "Select",
-            "label": "Destination",
-            "options": "Instant Experience\nWebsite\nCall\nMessaging Apps"
-        },
-        {
-            "fieldname": "creative_name",
-            "fieldtype": "Data",
-            "label": "Creative Name"
-        },
-        {
-            "fieldname": "format",
-            "fieldtype": "Select",
-            "label": "Format",
-            "options": "Single Image or Video\nCarousel\nCollection"
-        },
-        {
-            "fieldname": "section_break_jmop",
-            "fieldtype": "Section Break"
-        },
-        {
-            "fieldname": "website_url",
-            "fieldtype": "Data",
-            "label": "Website URL"
-        },
-        {
-            "fieldname": "display_link",
-            "fieldtype": "Data",
-            "label": "Display link"
-        },
-        {
-            "default": "None",
-            "fieldname": "browser_addons",
-            "fieldtype": "Select",
-            "label": "Browser add-ons",
-            "options": "None\nMessenger\nWhatsapp"
-        },
-        {
-            "fieldname": "select_facebook_page",
-            "fieldtype": "Select",
-            "label": "Select Facebook Page"
-        },
-        {
-            "fieldname": "section_break_fxgh",
-            "fieldtype": "Section Break"
-        },
-        {
-            "fieldname": "select_threads_account",
-            "fieldtype": "Select",
-            "hidden": 1,
-            "label": "Select Threads Account"
-        },
-        {
-            "fieldname": "select_instagram_account",
-            "fieldtype": "Select",
-            "label": "Select Instagram Account"
-        },
-        {
-            "fieldname": "column_break_qhks",
-            "fieldtype": "Column Break"
-        },
-        {
-            "fieldname": "section_break_ymlk",
-            "fieldtype": "Section Break"
-        },
-        {
-            "depends_on": "eval:doc.formate === \"Single Image or Video\"",
-            "fieldname": "medi",
-            "fieldtype": "Attach",
-            "label": "Media"
-        },
-        {
-            "depends_on": "eval:doc.format === \"Collection\" || doc.format === \"Carousel\"",
-            "fieldname": "media",
-            "fieldtype": "Table",
-            "label": "Media",
-            "options": "Social Post Media"
-        },
-        {
-            "default": "0",
-            "fieldname": "flexible_media",
-            "fieldtype": "Check",
-            "label": "Flexible media"
-        },
-        {
-            "fieldname": "section_break_ymho",
-            "fieldtype": "Section Break"
-        },
-        {
-            "default": "0",
-            "fieldname": "add_music",
-            "fieldtype": "Check",
-            "label": "Add Music"
-        },
-        {
-            "fieldname": "primary_text",
-            "fieldtype": "Text Editor",
-            "label": "Primary text"
-        },
-        {
-            "default": "0",
-            "fieldname": "add_a_destination",
-            "fieldtype": "Check",
-            "label": "Add a destination"
-        },
-        {
-            "fieldname": "headline",
-            "fieldtype": "Data",
-            "label": "Headline"
-        },
-        {
-            "fieldname": "description",
-            "fieldtype": "Small Text",
-            "label": "Description"
-        },
-        {
-            "fieldname": "section_break_srzw",
-            "fieldtype": "Section Break"
-        },
-        {
-            "fieldname": "column_break_niab",
-            "fieldtype": "Column Break"
-        },
-        {
-            "fieldname": "column_break_fvtp",
-            "fieldtype": "Column Break"
-        },
-        {
-            "fieldname": "ad_account",
-            "fieldtype": "Link",
-            "label": "Select Ad Account",
-            "options": "Ads Account Integration"
-        }
-    ],
-    "index_web_pages_for_search": 1,
-    "links": [],
-    "modified": "2026-02-25 09:22:31.298702",
-    "modified_by": "Administrator",
-    "module": "Ads Manager",
-    "name": "Ad Creative",
-    "owner": "Administrator",
-    "permissions": [
-        {
-            "create": 1,
-            "delete": 1,
-            "email": 1,
-            "export": 1,
-            "print": 1,
-            "read": 1,
-            "report": 1,
-            "role": "System Manager",
-            "share": 1,
-            "write": 1
-        }
-    ],
-    "row_format": "Dynamic",
-    "sort_field": "modified",
-    "sort_order": "DESC",
-    "states": []
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-01-08 12:10:17.994310",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "basic_information_section",
+  "creative_name",
+  "ad_lables",
+  "column_break_yifc",
+  "ad_account",
+  "section_break_fxgh",
+  "select_facebook_page",
+  "column_break_qhks",
+  "select_threads_account",
+  "select_instagram_account",
+  "ad_setup_section",
+  "select_ad_type",
+  "format",
+  "column_break_sbga",
+  "multi_advertiser_ads",
+  "selected_post_id",
+  "section_break_vsyz",
+  "destination",
+  "website_url",
+  "column_break_sjrx",
+  "display_link",
+  "browser_addons",
+  "section_break_ymlk",
+  "medi",
+  "media",
+  "section_break_srzw",
+  "flexible_media",
+  "column_break_niab",
+  "add_music",
+  "section_break_ymho",
+  "primary_text",
+  "column_break_fvtp",
+  "add_a_destination",
+  "headline",
+  "description",
+  "call_to_action",
+  "section_break_jmop",
+  "creative_id",
+  "section_break_elvw",
+  "applink_treatment",
+  "authorization_category",
+  "branded_content_sponsor_page_id",
+  "bundle_folder_id"
+ ],
+ "fields": [
+  {
+   "fieldname": "call_to_action",
+   "fieldtype": "Select",
+   "label": "Call To Action",
+   "options": "BOOK_TRAVEL\nCONTACT_US\nDONATE\nDONATE_NOW\nDOWNLOAD\nGET_DIRECTIONS\nGO_LIVE\nINTERESTED\nLEARN_MORE\nSEE_DETAILS\nLIKE_PAGE\nMESSAGE_PAGE\nRAISE_MONEY\nSAVE\nSEND_TIP\nSHOP_NOW\nSIGN_UP\nVIEW_INSTAGRAM_PROFILE\nINSTAGRAM_MESSAGE\nLOYALTY_LEARN_MORE\nPURCHASE_GIFT_CARDS\nPAY_TO_ACCESS\nSEE_MORE\nTRY_IN_CAMERA\nWHATSAPP_LINK\nGET_IN_TOUCH\nTRY_NOW\nASK_A_QUESTION\nSTART_A_CHAT\nCHAT_NOW\nASK_US\nCHAT_WITH_US\nBOOK_NOW\nCHECK_AVAILABILITY\nORDER_NOW\nWHATSAPP_MESSAGE\nGET_MOBILE_APP\nINSTALL_MOBILE_APP\nUSE_MOBILE_APP\nINSTALL_APP\nUSE_APP\nPLAY_GAME\nTRY_DEMO\nWATCH_VIDEO\nWATCH_MORE\nOPEN_LINK\nNO_BUTTON\nLISTEN_MUSIC\nMOBILE_DOWNLOAD\nGET_OFFER\nGET_OFFER_VIEW\nBUY_NOW\nBUY_TICKETS\nUPDATE_APP\nBET_NOW\nADD_TO_CART\nSELL_NOW\nGET_SHOWTIMES\nLISTEN_NOW\nGET_EVENT_TICKETS\nREMIND_ME\nSEARCH_MORE\nPRE_REGISTER\nSWIPE_UP_PRODUCT\nSWIPE_UP_SHOP\nPLAY_GAME_ON_FACEBOOK\nVISIT_WORLD\nOPEN_INSTANT_APP\nJOIN_GROUP\nGET_PROMOTIONS\nSEND_UPDATES\nINQUIRE_NOW\nVISIT_PROFILE\nCHAT_ON_WHATSAPP\nEXPLORE_MORE\nCONFIRM\nJOIN_CHANNEL\nMAKE_AN_APPOINTMENT\nASK_ABOUT_SERVICES\nBOOK_A_CONSULTATION\nGET_A_QUOTE\nBUY_VIA_MESSAGE\nASK_FOR_MORE_INFO\nVIEW_PRODUCT\nVIEW_CHANNEL\nWATCH_LIVE_VIDEO\nIMAGINE\nCALL\nMISSED_CALL\nCALL_NOW\nCALL_ME\nAPPLY_NOW\nBUY\nGET_QUOTE\nSUBSCRIBE\nRECORD_NOW\nVOTE_NOW\nGIVE_FREE_RIDES\nREGISTER_NOW\nOPEN_MESSENGER_EXT\nEVENT_RSVP\nCIVIC_ACTION\nSEND_INVITES\nREFER_FRIENDS\nREQUEST_TIME\nSEE_MENU\nSEARCH\nTRY_IT\nTRY_ON\nLINK_CARD\nDIAL_CODE\nFIND_YOUR_GROUPS\nSTART_ORDER"
+  },
+  {
+   "fieldname": "creative_id",
+   "fieldtype": "Data",
+   "label": "Creative ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "basic_information_section",
+   "fieldtype": "Section Break",
+   "label": "Basic Information"
+  },
+  {
+   "fieldname": "column_break_yifc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_vsyz",
+   "fieldtype": "Section Break",
+   "label": "Destination"
+  },
+  {
+   "fieldname": "column_break_sjrx",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "ad_setup_section",
+   "fieldtype": "Section Break",
+   "label": "Ad setup"
+  },
+  {
+   "fieldname": "select_ad_type",
+   "fieldtype": "Select",
+   "label": "Select Ad Type",
+   "options": "Create ad\nUse existing post\nUse Creative Hub mockup"
+  },
+  {
+   "default": "0",
+   "fieldname": "multi_advertiser_ads",
+   "fieldtype": "Check",
+   "label": "Multi-advertiser ads"
+  },
+  {
+   "fieldname": "selected_post_id",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Selected Post ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_sbga",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Website",
+   "fieldname": "destination",
+   "fieldtype": "Select",
+   "label": "Destination",
+   "options": "Instant Experience\nWebsite\nCall\nMessaging Apps"
+  },
+  {
+   "fieldname": "creative_name",
+   "fieldtype": "Data",
+   "label": "Creative Name"
+  },
+  {
+   "fieldname": "format",
+   "fieldtype": "Select",
+   "label": "Format",
+   "options": "Single Image or Video\nCarousel\nCollection"
+  },
+  {
+   "fieldname": "section_break_jmop",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "website_url",
+   "fieldtype": "Data",
+   "label": "Website URL"
+  },
+  {
+   "fieldname": "display_link",
+   "fieldtype": "Data",
+   "label": "Display link"
+  },
+  {
+   "default": "None",
+   "fieldname": "browser_addons",
+   "fieldtype": "Select",
+   "label": "Browser add-ons",
+   "options": "None\nMessenger\nWhatsapp"
+  },
+  {
+   "fieldname": "select_facebook_page",
+   "fieldtype": "Select",
+   "label": "Select Facebook Page"
+  },
+  {
+   "fieldname": "section_break_fxgh",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "select_threads_account",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Select Threads Account"
+  },
+  {
+   "fieldname": "select_instagram_account",
+   "fieldtype": "Select",
+   "label": "Select Instagram Account"
+  },
+  {
+   "fieldname": "column_break_qhks",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_ymlk",
+   "fieldtype": "Section Break"
+  },
+  {
+   "depends_on": "eval:doc.format === \"Single Image or Video\"",
+   "fieldname": "medi",
+   "fieldtype": "Attach",
+   "label": "Media"
+  },
+  {
+   "depends_on": "eval:doc.format === \"Collection\" || doc.format === \"Carousel\"",
+   "fieldname": "media",
+   "fieldtype": "Table",
+   "label": "Media",
+   "options": "Social Post Media"
+  },
+  {
+   "default": "0",
+   "fieldname": "flexible_media",
+   "fieldtype": "Check",
+   "label": "Flexible media"
+  },
+  {
+   "fieldname": "section_break_ymho",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "add_music",
+   "fieldtype": "Check",
+   "label": "Add Music"
+  },
+  {
+   "fieldname": "primary_text",
+   "fieldtype": "Text Editor",
+   "label": "Primary text"
+  },
+  {
+   "default": "0",
+   "fieldname": "add_a_destination",
+   "fieldtype": "Check",
+   "label": "Add a destination"
+  },
+  {
+   "fieldname": "headline",
+   "fieldtype": "Data",
+   "label": "Headline"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "fieldname": "section_break_srzw",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_niab",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_fvtp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "ad_account",
+   "fieldtype": "Link",
+   "label": "Select Ad Account",
+   "options": "Ads Account Integration"
+  },
+  {
+   "fieldname": "ad_lables",
+   "fieldtype": "Table",
+   "label": "Ad Lables",
+   "options": "Ad Label"
+  },
+  {
+   "fieldname": "section_break_elvw",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "applink_treatment",
+   "fieldtype": "Select",
+   "label": "Applink Treatment",
+   "options": "\nautomatic\ndeeplink_with_web_fallback\ndeeplink_with_appstore_fallback\nweb_only"
+  },
+  {
+   "fieldname": "authorization_category",
+   "fieldtype": "Select",
+   "label": "Authorization Category",
+   "options": "\nNONE\nPOLITICAL\nPOLITICAL_WITH_DIGITALLY_CREATED_MEDIA"
+  },
+  {
+   "fieldname": "branded_content_sponsor_page_id",
+   "fieldtype": "Data",
+   "label": "Branded Content Sponsor Page ID"
+  },
+  {
+   "fieldname": "bundle_folder_id",
+   "fieldtype": "Data",
+   "label": "Bundle Folder ID"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-03-01 12:46:29.411018",
+ "modified_by": "Administrator",
+ "module": "Ads Manager",
+ "name": "Ad Creative",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
 }

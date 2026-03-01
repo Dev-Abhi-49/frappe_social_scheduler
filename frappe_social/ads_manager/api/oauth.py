@@ -770,7 +770,7 @@ def _get_auth_url(platform: str, settings, redirect_uri: str, state: str) -> str
             "pages_manage_posts",
             "pages_read_user_content",
             "pages_manage_ads",
-            # "business_management",
+            "business_management",
             # ── Ads ───────────────────────────────────────────────────
             "ads_management",
             "ads_read",

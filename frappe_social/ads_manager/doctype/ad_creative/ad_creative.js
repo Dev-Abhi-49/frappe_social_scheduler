@@ -1,9 +1,12 @@
+// ad_creative.js
+// Copyright (c) 2026, Abhishek and contributors
+
 frappe.ui.form.on('Ad Creative', {
     refresh(frm) {
-        // Show adset ID info if already created
+        // Show creative ID status
         if (frm.doc.creative_id) {
             frm.set_df_property('creative_id', 'description',
-                `✓ Ad Set created on Meta: ${frm.doc.adset_id}`);
+                `✓ Creative created on Meta: ${frm.doc.creative_id}`);
         }
 
         if (frm.doc.ad_account) {
@@ -11,11 +14,18 @@ frappe.ui.form.on('Ad Creative', {
             load_instagram_accounts(frm);
         }
 
-        // Show button for "Use existing post" option
+        // "Browse Posts" button only for existing-post flow
         if (frm.doc.select_ad_type === 'Use existing post') {
-            frm.add_custom_button('Browse Posts', function () {
+            frm.add_custom_button(__('Browse Posts'), function () {
                 open_posts_browser(frm);
-            }, 'Ad setup');
+            }, __('Ad Setup'));
+        }
+
+        // "Create on Meta" button – only if not yet created
+        if (!frm.doc.creative_id && !frm.is_new()) {
+            frm.add_custom_button(__('Create on Meta'), function () {
+                frm.trigger('create_on_meta');
+            }, __('Actions'));
         }
     },
 
@@ -26,50 +36,76 @@ frappe.ui.form.on('Ad Creative', {
 
     select_ad_type(frm) {
         frm.refresh();
+    },
+
+    create_on_meta(frm) {
+        frappe.confirm(
+            __('This will submit the Ad Creative to Meta. Continue?'),
+            function () {
+                frappe.call({
+                    method: 'frappe_social.ads_manager.doctype.ad_creative.ad_creative.create_creative_on_meta',
+                    args: { doc_name: frm.doc.name },
+                    freeze: true,
+                    freeze_message: __('Submitting to Meta…'),
+                    callback(r) {
+                        if (r.message && r.message.success) {
+                            frappe.show_alert({
+                                message: __('✓ Creative created: {0}', [r.message.creative_id]),
+                                indicator: 'green'
+                            }, 5);
+                            frm.reload_doc();
+                        } else {
+                            frappe.msgprint({
+                                title: __('Meta API Error'),
+                                indicator: 'red',
+                                message: r.message && r.message.error
+                                    ? r.message.error
+                                    : __('Unknown error. Check Error Log.')
+                            });
+                        }
+                    }
+                });
+            }
+        );
     }
 });
 
+// ============================================================================
+// Facebook page / Instagram account loaders
+// ============================================================================
+
 function load_facebook_pages(frm) {
     const ad_account = frm.doc.ad_account;
-
     if (!ad_account) {
-        // Clear the field if no ad account is selected
-        frm.set_df_property('select_facebook_page', 'options', []);
+        frm.set_df_property('select_facebook_page', 'options', '');
         frm.refresh_field('select_facebook_page');
         return;
     }
 
-    // Show loading state
-    frm.set_df_property('select_facebook_page', 'description', 'Loading Facebook pages...');
+    frm.set_df_property('select_facebook_page', 'description', __('Loading Facebook pages…'));
 
-    // Fetch the ad account details and its associated pages
     frappe.call({
         method: 'frappe_social.ads_manager.doctype.ad_creative.ad_creative.get_facebook_pages',
-        args: {
-            ad_account: ad_account
-        },
-        callback: function (r) {
-            if (r.message) {
-                const pages = r.message;
-
-                if (pages.length === 0) {
-                    frm.set_df_property('select_facebook_page', 'options', '');
-                    frm.set_df_property('select_facebook_page', 'description',
-                        'No Facebook pages found for this ad account');
-                } else {
-                    // Build options string for the Select field with both name and ID
-                    const options = pages.map(page => `${page.page_name} (${page.page_id})`).join('\n');
-                    frm.set_df_property('select_facebook_page', 'options', options);
-                    frm.set_df_property('select_facebook_page', 'description',
-                        `✓ Found ${pages.length} Facebook page(s)`);
-                }
-                frm.refresh_field('select_facebook_page');
+        args: { ad_account },
+        callback(r) {
+            const pages = r.message || [];
+            if (pages.length === 0) {
+                frm.set_df_property('select_facebook_page', 'options', '');
+                frm.set_df_property('select_facebook_page', 'description',
+                    __('No Facebook pages found for this ad account'));
+            } else {
+                // Store as "Page Name (page_id)" so _extract_id() can parse it
+                const options = pages.map(p => `${p.page_name} (${p.page_id})`).join('\n');
+                frm.set_df_property('select_facebook_page', 'options', options);
+                frm.set_df_property('select_facebook_page', 'description',
+                    __('✓ {0} Facebook page(s) found', [pages.length]));
             }
+            frm.refresh_field('select_facebook_page');
         },
-        error: function (err) {
+        error(err) {
             console.error('Error loading Facebook pages:', err);
             frm.set_df_property('select_facebook_page', 'description',
-                'Error loading Facebook pages. Please try again.');
+                __('Error loading pages – please try again'));
             frm.refresh_field('select_facebook_page');
         }
     });
@@ -77,205 +113,166 @@ function load_facebook_pages(frm) {
 
 function load_instagram_accounts(frm) {
     const ad_account = frm.doc.ad_account;
-
     if (!ad_account) {
-        // Clear the field if no ad account is selected
-        frm.set_df_property('select_instagram_account', 'options', []);
+        frm.set_df_property('select_instagram_account', 'options', '');
         frm.refresh_field('select_instagram_account');
         return;
     }
 
-    // Show loading state
-    frm.set_df_property('select_instagram_account', 'description', 'Loading Instagram Account...');
+    frm.set_df_property('select_instagram_account', 'description', __('Loading Instagram accounts…'));
 
-    // Fetch the ad account details and its associated pages
     frappe.call({
         method: 'frappe_social.ads_manager.doctype.ad_creative.ad_creative.get_instagram_account',
-        args: {
-            ad_account: ad_account
-        },
-        callback: function (r) {
-            if (r.message) {
-                const pages = r.message;
-
-                if (pages.length === 0) {
-                    frm.set_df_property('select_instagram_account', 'options', '');
-                    frm.set_df_property('select_instagram_account', 'description',
-                        'No Instagram Account found for this ad account');
-                } else {
-                    // Build options string for the Select field with both name and ID
-                    const options = pages.map(page => `${page.page_name} (${page.page_id})`).join('\n');
-                    frm.set_df_property('select_instagram_account', 'options', options);
-                    frm.set_df_property('select_instagram_account', 'description',
-                        `✓ Found ${pages.length} Instagram Account(s)`);
-                }
-                frm.refresh_field('select_instagram_account');
+        args: { ad_account },
+        callback(r) {
+            const accounts = r.message || [];
+            if (accounts.length === 0) {
+                frm.set_df_property('select_instagram_account', 'options', '');
+                frm.set_df_property('select_instagram_account', 'description',
+                    __('No Instagram accounts found'));
+            } else {
+                const options = accounts.map(a => `${a.page_name} (${a.page_id})`).join('\n');
+                frm.set_df_property('select_instagram_account', 'options', options);
+                frm.set_df_property('select_instagram_account', 'description',
+                    __('✓ {0} Instagram account(s) found', [accounts.length]));
             }
+            frm.refresh_field('select_instagram_account');
         },
-        error: function (err) {
-            console.error('Error loading Instagram Account:', err);
+        error(err) {
+            console.error('Error loading Instagram accounts:', err);
             frm.set_df_property('select_instagram_account', 'description',
-                'Error loading Instagram Account. Please try again.');
+                __('Error loading accounts – please try again'));
             frm.refresh_field('select_instagram_account');
         }
     });
 }
 
 // ============================================================================
-// Posts Browser Modal
+// Existing-post browser modal
 // ============================================================================
 
 function open_posts_browser(frm) {
-    // Validate that Facebook page is selected
     if (!frm.doc.select_facebook_page) {
-        frappe.msgprint('Please select a Facebook Page first');
+        frappe.msgprint(__('Please select a Facebook Page first'));
         return;
     }
-
-    // Extract page ID from the selected value (format: "Page Name (page_id)")
-    const pageValue = frm.doc.select_facebook_page;
-    const pageIdMatch = pageValue.match(/\((\d+)\)$/);
-    const page_id = pageIdMatch ? pageIdMatch[1] : pageValue;
-
     if (!frm.doc.ad_account) {
-        frappe.msgprint('Please select an Ad Account first');
+        frappe.msgprint(__('Please select an Ad Account first'));
         return;
     }
 
-    // Create modal dialog
-    let dialog = new frappe.ui.Dialog({
-        title: 'Select Existing Post',
-        fields: [
-            {
-                fieldtype: 'Link',
-                fieldname: 'search_text',
-                label: 'Search Posts',
-                options: 'Post',
-                df: { fieldtype: 'Data' }
-            }
-        ],
-        primary_action_label: 'Close',
-        primary_action(values) {
-            dialog.hide();
-        }
+    // Extract bare page_id from "Page Name (123456789)"
+    const pageIdMatch = frm.doc.select_facebook_page.match(/\((\d+)\)$/);
+    const page_id = pageIdMatch ? pageIdMatch[1] : frm.doc.select_facebook_page;
+
+    const dialog = new frappe.ui.Dialog({
+        title: __('Select Existing Post'),
+        primary_action_label: __('Close'),
+        primary_action() { dialog.hide(); }
     });
 
-    // Create posts container
-    let posts_html = `
-        <div style="padding: 15px;">
-            <div id="posts-loading" style="text-align: center; padding: 20px;">
-                <p><i class="fa fa-spinner fa-spin"></i> Loading posts...</p>
+    dialog.$wrapper.find('.modal-body').html(`
+        <div style="padding:15px;">
+            <div id="posts-loading" style="text-align:center;padding:20px;">
+                <i class="fa fa-spinner fa-spin"></i> ${__('Loading posts…')}
             </div>
             <div id="posts-container"></div>
         </div>
-    `;
-
-    dialog.$wrapper.find('.modal-body').html(posts_html);
+    `);
     dialog.show();
 
-    // Fetch posts from backend
     frappe.call({
         method: 'frappe_social.ads_manager.doctype.ad_creative.ad_creative.get_existing_posts',
-        args: {
-            ad_account: frm.doc.ad_account,
-            page_id: page_id,
-            limit: 50
-        },
-        callback: function (r) {
+        args: { ad_account: frm.doc.ad_account, page_id, limit: 50 },
+        callback(r) {
             document.getElementById('posts-loading').style.display = 'none';
-
-            if (r.message && r.message.length > 0) {
-                render_posts_table(r.message, frm, dialog);
+            const posts = r.message || [];
+            if (posts.length > 0) {
+                render_posts_table(posts, frm, dialog);
             } else {
-                document.getElementById('posts-container').innerHTML = '<p style="text-align: center; color: #999;">No posts found</p>';
+                document.getElementById('posts-container').innerHTML =
+                    `<p style="text-align:center;color:#999;">${__('No posts found')}</p>`;
             }
         },
-        error: function (err) {
+        error(err) {
             document.getElementById('posts-loading').style.display = 'none';
-            document.getElementById('posts-container').innerHTML = '<p style="color: red;">Error loading posts. Please try again.</p>';
-            console.error('Error fetching posts:', err);
+            document.getElementById('posts-container').innerHTML =
+                `<p style="color:red;">${__('Error loading posts. Please try again.')}</p>`;
+            console.error(err);
         }
     });
 }
 
 function render_posts_table(posts, frm, dialog) {
-    let html = `
-        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-            <thead>
-                <tr style="background-color: #f5f5f5; border-bottom: 1px solid #ddd;">
-                    <th style="padding: 10px; text-align: left;">Media</th>
-                    <th style="padding: 10px; text-align: left;">Post Content</th>
-                    <th style="padding: 10px; text-align: left;">Post ID</th>
-                    <th style="padding: 10px; text-align: left;">Source</th>
-                    <th style="padding: 10px; text-align: left;">Type</th>
-                    <th style="padding: 10px; text-align: left;">Created</th>
-                    <th style="padding: 10px; text-align: center;">Action</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
+    let rows = posts.map(post => {
+        const media = post.media_url
+            ? `<img src="${post.media_url}" style="width:50px;height:50px;object-fit:cover;border-radius:4px;">`
+            : `<div style="width:50px;height:50px;background:#f0f0f0;border-radius:4px;display:flex;align-items:center;justify-content:center;"><i class="fa fa-image" style="color:#999;"></i></div>`;
 
-    posts.forEach((post) => {
-        const media_preview = post.media_url
-            ? `<img src="${post.media_url}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">`
-            : `<div style="width: 50px; height: 50px; background: #f0f0f0; border-radius: 4px; display: flex; align-items: center; justify-content: center;"><i class="fa fa-image" style="color: #999;"></i></div>`;
+        const caption = (post.message || '').substring(0, 60)
+            + ((post.message || '').length > 60 ? '…' : '');
 
-        const message = (post.message || '').substring(0, 50);
-        const message_truncated = post.message && post.message.length > 50 ? message + '...' : message;
+        // Safely encode data into a data-attribute to avoid inline JS quoting issues
+        const safePostId = (post.post_id || '').replace(/"/g, '&quot;');
+        const safeMsg    = (post.message || '').replace(/"/g, '&quot;').substring(0, 500);
 
-        html += `
-            <tr style="border-bottom: 1px solid #eee; hover: background-color: #f9f9f9;">
-                <td style="padding: 10px;">${media_preview}</td>
-                <td style="padding: 10px; max-width: 200px; word-wrap: break-word;">${message_truncated || '(No caption)'}</td>
-                <td style="padding: 10px; font-family: monospace; font-size: 12px;">${post.post_id}</td>
-                <td style="padding: 10px;">${post.source || 'Feed'}</td>
-                <td style="padding: 10px;">${post.media_type || 'Status'}</td>
-                <td style="padding: 10px;">${post.created_date || 'N/A'}</td>
-                <td style="padding: 10px; text-align: center;">
-                    <button class="btn btn-xs btn-primary" onclick="select_post_for_creative('${post.post_id}', '${post.message.replace(/'/g, "\\'")}', '${frm.name}', event)">
-                        Select
+        return `
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:10px;">${media}</td>
+                <td style="padding:10px;max-width:220px;word-wrap:break-word;">${caption || '(No caption)'}</td>
+                <td style="padding:10px;font-family:monospace;font-size:12px;">${post.post_id}</td>
+                <td style="padding:10px;">${post.source || 'Feed'}</td>
+                <td style="padding:10px;">${post.media_type || 'Status'}</td>
+                <td style="padding:10px;">${post.created_date || 'N/A'}</td>
+                <td style="padding:10px;text-align:center;">
+                    <button class="btn btn-xs btn-primary select-post-btn"
+                        data-post-id="${safePostId}"
+                        data-message="${safeMsg}">
+                        ${__('Select')}
                     </button>
                 </td>
-            </tr>
-        `;
+            </tr>`;
+    }).join('');
+
+    const html = `
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead>
+                <tr style="background:#f5f5f5;border-bottom:1px solid #ddd;">
+                    <th style="padding:10px;text-align:left;">${__('Media')}</th>
+                    <th style="padding:10px;text-align:left;">${__('Caption')}</th>
+                    <th style="padding:10px;text-align:left;">${__('Post ID')}</th>
+                    <th style="padding:10px;text-align:left;">${__('Source')}</th>
+                    <th style="padding:10px;text-align:left;">${__('Type')}</th>
+                    <th style="padding:10px;text-align:left;">${__('Created')}</th>
+                    <th style="padding:10px;text-align:center;">${__('Action')}</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>`;
+
+    const container = document.getElementById('posts-container');
+    container.innerHTML = html;
+
+    // Attach click handlers via event delegation (no inline JS)
+    container.querySelectorAll('.select-post-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const post_id = this.dataset.postId;
+            const message = this.dataset.message || '';
+            select_post(post_id, message, frm, dialog);
+        });
     });
-
-    html += `
-            </tbody>
-        </table>
-    `;
-
-    document.getElementById('posts-container').innerHTML = html;
 }
 
-function select_post_for_creative(post_id, message, form_name, event) {
-    event.preventDefault();
-
-    frappe.call({
-        method: 'frappe.client.get',
-        args: {
-            doctype: 'Ad Creative',
-            name: form_name
-        },
-        callback: function (r) {
-            if (r.message) {
-                let frm = cur_frm;
-
-                // Store post details
-                frm.set_value({
-                    'select_ad_type': 'Use existing post',
-                    'selected_post_id': post_id,
-                    'primary_text': message || ''
-                });
-
-                frappe.msgprint(`Post ${post_id} selected successfully!`);
-
-                // Close all dialogs
-                document.querySelectorAll('.modal').forEach(modal => {
-                    let instance = $(modal).data('bs.modal');
-                    if (instance) instance.hide();
-                });
-            }
-        }
+function select_post(post_id, message, frm, dialog) {
+    frm.set_value({
+        'select_ad_type':   'Use existing post',
+        'selected_post_id': post_id,
+        'primary_text':     message
     });
+
+    dialog.hide();
+    frappe.show_alert({
+        message: __('Post {0} selected', [post_id]),
+        indicator: 'green'
+    }, 3);
 }

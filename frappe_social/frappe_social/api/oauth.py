@@ -77,7 +77,7 @@ def _get_auth_url(platform: str, settings, redirect_uri: str, state: str) -> str
             "client_id": settings.linkedin_client_id,
             "redirect_uri": redirect_uri,
             "state": state,
-            "scope": "openid profile email w_member_social r_organization_admin w_organization_social",
+            "scope": "openid profile email w_member_social",
         }
         return f"https://www.linkedin.com/oauth/v2/authorization?{'&'.join(f'{k}={frappe.utils.quoted(str(v))}' for k,v in params.items())}"
     
@@ -229,7 +229,7 @@ def callback_linkedin():
         data={
             "grant_type": "authorization_code",
             "code": code,
-            # "redirect_uri": get_callback_url("LinkedIn"),
+            "redirect_uri": get_callback_url("LinkedIn"),
             "client_id": settings.linkedin_client_id,
             "client_secret": settings.get_password("linkedin_client_secret"),
         },
