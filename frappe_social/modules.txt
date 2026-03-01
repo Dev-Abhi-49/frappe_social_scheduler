@@ -1,3 +1,4 @@
 Frappe Social
 Ads Manager
 API Credentials
+Workspace
