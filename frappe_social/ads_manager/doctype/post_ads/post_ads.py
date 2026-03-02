@@ -169,7 +169,7 @@ class PostAds(Document):
                 "name": self.ad_name,
                 "adset_id": ad_set.adset_id,
                 "creative": {"creative_id": creative.creative_id},
-                "status": "PAUSED"  # Always start paused
+                "status": "ACTIVE" if self.enable_ad else "PAUSED"  # Always start paused
             }
             
             # Create ad on Meta
