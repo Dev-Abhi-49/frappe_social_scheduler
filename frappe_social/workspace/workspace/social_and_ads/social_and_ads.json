@@ -13,7 +13,7 @@
  "is_hidden": 0,
  "label": "Social and Ads",
  "links": [],
- "modified": "2026-03-01 22:15:19.623142",
+ "modified": "2026-03-02 10:49:38.045356",
  "modified_by": "Administrator",
  "module": "Workspace",
  "name": "Social and Ads",
@@ -30,7 +30,7 @@
    "doc_view": "List",
    "label": "API Credentials",
    "type": "URL",
-   "url": "/app/api-credentials"
+   "url": "/app/social-settings"
   },
   {
    "color": "Grey",
