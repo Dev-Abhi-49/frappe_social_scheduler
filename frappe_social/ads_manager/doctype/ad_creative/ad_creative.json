@@ -7,14 +7,13 @@
  "field_order": [
   "basic_information_section",
   "creative_name",
-  "ad_lables",
   "column_break_yifc",
   "ad_account",
-  "section_break_fxgh",
   "select_facebook_page",
+  "section_break_fxgh",
+  "select_instagram_account",
   "column_break_qhks",
   "select_threads_account",
-  "select_instagram_account",
   "ad_setup_section",
   "select_ad_type",
   "format",
@@ -144,6 +143,7 @@
    "default": "None",
    "fieldname": "browser_addons",
    "fieldtype": "Select",
+   "hidden": 1,
    "label": "Browser add-ons",
    "options": "None\nMessenger\nWhatsapp"
   },
@@ -165,6 +165,7 @@
   {
    "fieldname": "select_instagram_account",
    "fieldtype": "Select",
+   "hidden": 1,
    "label": "Select Instagram Account"
   },
   {
@@ -213,6 +214,7 @@
    "default": "0",
    "fieldname": "add_a_destination",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Add a destination"
   },
   {
@@ -227,7 +229,8 @@
   },
   {
    "fieldname": "section_break_srzw",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "hidden": 1
   },
   {
    "fieldname": "column_break_niab",
@@ -244,14 +247,9 @@
    "options": "Ads Account Integration"
   },
   {
-   "fieldname": "ad_lables",
-   "fieldtype": "Table",
-   "label": "Ad Lables",
-   "options": "Ad Label"
-  },
-  {
    "fieldname": "section_break_elvw",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "hidden": 1
   },
   {
    "fieldname": "applink_treatment",
@@ -278,7 +276,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-01 12:46:29.411018",
+ "modified": "2026-03-02 09:20:26.395972",
  "modified_by": "Administrator",
  "module": "Ads Manager",
  "name": "Ad Creative",

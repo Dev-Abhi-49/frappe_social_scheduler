@@ -1,233 +1,312 @@
+"""
+Post Ads - Meta Ad Manager
+Manages ad creation and publishing to Meta (Facebook/Instagram)
+"""
+
 import frappe
 from frappe.model.document import Document
 from frappe import _
-from frappe_social.frappe_social.utils.media import normalize_file_type
-import os
-import json
-import re
-import html
+from datetime import datetime
 from typing import Dict, Optional
 
 
 class PostAds(Document):
     """
-    Post Ads - Pure Meta Ads Manager
-    Handles: Campaign → Ad Set → Creative → Ad
+    Post Ads DocType
+    
+    Fields:
+    - enable_ad: Enable/disable the ad (Check)
+    - ad_name: Name of the ad (Data, required)
+    - campaign: Marketing campaign link (Link, required)
+    - status: Ad status - ACTIVE, PAUSED, DELETED, ARCHIVED (Select, read-only)
+    - partnership_ad: Whether this is a partnership ad (Check)
+    - select_ad_set: Ad set for the ad (Link, required)
+    - schedule_time: When to schedule the ad (Datetime)
+    - id: External Meta ad ID (Data)
+    - select_ad_creative: Ad creative to use (Link)
     """
 
-    VALID_TRANSITIONS = {
-        "Draft": ["Publishing", "Cancelled"],
-        "Publishing": ["Published", "Failed"],
-        "Published": [],
-        "Failed": ["Publishing"],
-        "Cancelled": ["Draft"],
-    }
-
     def before_save(self):
-        """Auto-set defaults for ads"""
+        """Auto-set defaults before saving"""
         if not self.status:
-            self.status = "Draft"
+            self.status = "PAUSED"
+        
+        if not self.enable_ad:
+            self.enable_ad = 0
+        
+        if not self.partnership_ad:
+            self.partnership_ad = 0
 
     def validate(self):
-        """Ad-only validation"""
-        self.fix_media_metadata()
-        self.validate_ad_fields()
-        if self.media:
-            self.validate_media()
-        if self.content:
-            self.validate_content_length()
+        """Validate ad fields"""
+        self.validate_required_fields()
+        self.validate_campaign()
+        self.validate_ad_set()
+        self.validate_creative()
+        self.validate_schedule_time()
 
-    def validate_ad_fields(self):
-        """Required fields for Meta Ad creation"""
-        required = {
-            'campaign': 'Campaign',
-            'select_ad_account': 'Ads Account Integration',
-            'select_ad_set': 'Ad Set',
-            'selected_facebook_page': 'Facebook Page'
+    def validate_required_fields(self):
+        """Check required fields are filled"""
+        required_fields = {
+            'ad_name': _('Ad Name'),
+            'campaign': _('Campaign'),
+            'select_ad_set': _('Ad Set'),
+            'select_ad_creative': _('Ad Creative')
         }
 
-        for field, label in required.items():
+        for field, label in required_fields.items():
             if not self.get(field):
                 frappe.throw(
-                    _(f"{label} is required for ad creation"),
-                    title=_("Missing Field")
+                    _("{0} is required").format(label),
+                    title=_("Validation Error")
                 )
 
-        # Campaign must be Meta
-        campaign = frappe.get_doc('Marketing Campaign', self.campagin)
-        if not campaign.custom_is_meta_ads:
-            frappe.throw(_("Campaign must be Meta Ads"), title=_("Invalid Campaign"))
+    def validate_campaign(self):
+        """Validate campaign exists and is Meta Ads enabled"""
+        try:
+            campaign = frappe.get_doc('Marketing Campaign', self.campaign)
+            
+            # Check if it's a Meta campaign (if that field exists)
+            if hasattr(campaign, 'custom_is_meta_ads'):
+                if not campaign.custom_is_meta_ads:
+                    frappe.throw(
+                        _("Campaign must be enabled for Meta Ads"),
+                        title=_("Invalid Campaign")
+                    )
+        except frappe.DoesNotExistError:
+            frappe.throw(
+                _("Campaign {0} does not exist").format(self.campaign),
+                title=_("Campaign Error")
+            )
 
-        # Account connected?
-        ad_account = frappe.get_doc('Ads Account Integration', self.select_ad_account)
-        if ad_account.connection_status != 'Connected':
-            frappe.throw(_("Ad account not connected"), title=_("Connection Error"))
-
-        # Ad Set valid?
-        ad_set = frappe.get_doc('Ad Set', self.select_ad_set)
-        if ad_set.campaign != self.campagin or not ad_set.adset_id:
-            frappe.throw(_("Ad Set invalid or not created on Meta"), title=_("Invalid Ad Set"))
-
-    def fix_media_metadata(self):
-        """Fix file metadata"""
-        if not self.media:
-            return
-        for item in self.media:
-            if not item.file:
-                continue
-            try:
-                db_file = frappe.db.get_value(
-                    "File", {"file_url": item.file}, ["file_type", "file_size"], as_dict=True
+    def validate_ad_set(self):
+        """Validate ad set is valid and belongs to campaign"""
+        try:
+            ad_set = frappe.get_doc('Ad Set', self.select_ad_set)
+            
+            # Check ad set belongs to this campaign
+            if ad_set.campaign != self.campaign:
+                frappe.throw(
+                    _("Ad Set {0} does not belong to Campaign {1}").format(
+                        self.select_ad_set, self.campaign
+                    ),
+                    title=_("Invalid Ad Set")
                 )
-                if db_file:
-                    item.file_size = db_file.get('file_size') or 0
-                    item.file_type = normalize_file_type(item.file, db_file.get('file_type'))
-            except Exception as e:
-                frappe.log_error(f"Media metadata error: {str(e)}", "Post Ads")
+            
+            # Check ad set is created on Meta
+            if not ad_set.adset_id:
+                frappe.throw(
+                    _("Ad Set {0} has not been created on Meta yet").format(
+                        self.select_ad_set
+                    ),
+                    title=_("Ad Set Not Active")
+                )
+        except frappe.DoesNotExistError:
+            frappe.throw(
+                _("Ad Set {0} does not exist").format(self.select_ad_set),
+                title=_("Ad Set Error")
+            )
 
-    def validate_content_length(self):
-        """Basic content check"""
-        if len(self.content or "") > 63206:  # Facebook max
-            frappe.throw(_("Content too long for Meta Ads"), title=_("Content Error"))
+    def validate_creative(self):
+        """Validate ad creative exists"""
+        try:
+            creative = frappe.get_doc('Ad Creative', self.select_ad_creative)
+            
+            # Check creative is valid
+            if not creative.creative_id:
+                frappe.throw(
+                    _("Ad Creative {0} has not been created on Meta yet").format(
+                        self.select_ad_creative
+                    ),
+                    title=_("Creative Not Active")
+                )
+        except frappe.DoesNotExistError:
+            frappe.throw(
+                _("Ad Creative {0} does not exist").format(self.select_ad_creative),
+                title=_("Creative Error")
+            )
 
-    def validate_media(self):
-        """Media for Meta Ads"""
-        if len(self.media) > 10:
-            frappe.throw(_("Max 10 media files for ads"), title=_("Media Limit"))
-        for media in self.media:
-            file_type = (media.file_type or "").lower()
-            if not ("image" in file_type or "video" in file_type):
-                frappe.throw(_("Only images/videos allowed"), title=_("Invalid Media"))
+    def validate_schedule_time(self):
+        """Validate schedule time is in the future if set"""
+        if self.schedule_time:
+            scheduled = datetime.fromisoformat(str(self.schedule_time))
+            now = datetime.now()
+            
+            if scheduled < now:
+                frappe.throw(
+                    _("Schedule time must be in the future"),
+                    title=_("Invalid Schedule Time")
+                )
 
     # =====================================================
-    # AD CREATIVE & PUBLISHING
+    # AD PUBLISHING METHODS
     # =====================================================
 
-    def build_ad_creative_payload(self) -> Dict:
-        """Build clean Meta Creative payload (image_hash)"""
-        page_id = self._get_facebook_page_id()
-        creative_name = self.ad_name or f"Creative-{self.name}"
-        link_url = self.ad_creative[0].link_url if self.ad_creative else ""
+    def publish_ad(self):
+        """
+        Publish ad to Meta
+        Status flow: PAUSED → publish to Meta with ID
+        """
+        if not self.enable_ad:
+            frappe.throw(
+                _("Please enable the ad before publishing"),
+                title=_("Ad Not Enabled")
+            )
         
-        link_data = {
-            "link": link_url or "https://walue.biz",
-            "description": (self.content or "Ad")[:200],
-            "caption": link_url.split('//')[-1].split('/')[0] if link_url else "walue.biz"
-        }
-
-        # CTA
-        if self.ad_creative and self.ad_creative[0].call_to_action:
-            cta = self._map_cta_to_meta_format(self.ad_creative[0].call_to_action)
-            link_data["call_to_action"] = {"type": cta}
-
-        # Media (image_hash)
-        if self.media:
-            if len(self.media) == 1:
-                image_hash = self._upload_image_to_meta(self.media[0].file)
-                if image_hash:
-                    link_data["image_hash"] = image_hash
-            else:
-                child_attachments = []
-                for m in self.media:
-                    h = self._upload_image_to_meta(m.file)
-                    if h:
-                        child_attachments.append({"image_hash": h, "link": link_url})
-                if child_attachments:
-                    link_data["child_attachments"] = child_attachments
-
-        creative_payload = {
-            "name": creative_name,
-            "object_story_spec": {
-                "page_id": page_id,
-                "link_data": link_data
+        try:
+            from frappe_social.ads_manager.providers.meta_ads import MetaAdsProvider
+            
+            # Get ad set details
+            ad_set = frappe.get_doc('Ad Set', self.select_ad_set)
+            creative = frappe.get_doc('Ad Creative', self.select_ad_creative)
+            
+            # Initialize Meta provider
+            account_integration = self.get_account_integration()
+            provider = MetaAdsProvider(account_integration)
+            
+            # Build ad payload
+            ad_payload = {
+                "name": self.ad_name,
+                "adset_id": ad_set.adset_id,
+                "creative": {"creative_id": creative.creative_id},
+                "status": "PAUSED"  # Always start paused
             }
-        }
+            
+            # Create ad on Meta
+            result = provider.create_ad(ad_payload)
+            
+            if not result.success:
+                frappe.throw(
+                    _("Failed to create ad on Meta: {0}").format(result.error_message),
+                    title=_("Meta API Error")
+                )
+            
+            # Store the Meta ad ID
+            self.id = result.ad_id
+            self.status = "ACTIVE"
+            self.save(ignore_permissions=True)
+            
+            return {
+                "success": True,
+                "message": _("Ad published successfully"),
+                "ad_id": result.ad_id
+            }
+            
+        except Exception as e:
+            frappe.log_error(frappe.get_traceback(), "Post Ads - Publish Error")
+            return {
+                "success": False,
+                "message": str(e)
+            }
 
-        frappe.log_error(json.dumps(creative_payload, indent=2), f"Creative Payload - {self.name}")
-        return creative_payload
-
-    def build_ad_payload(self, creative_id: str) -> Dict:
-        """Build Meta Ad payload"""
-        ad_set = frappe.get_doc('Ad Set', self.select_ad_set)
-        ad_name = self.ad_name or f"Ad-{self.name}"
+    def pause_ad(self):
+        """Pause the ad on Meta"""
+        if not self.id:
+            frappe.throw(_("No Meta ad ID found"), title=_("Ad Not Published"))
         
-        return {
-            "name": ad_name,
-            "adset_id": ad_set.adset_id,
-            "creative": {"creative_id": creative_id},
-            "status": "PAUSED"
-        }
-
-    def _get_facebook_page_id(self) -> str:
-        """Get page ID from account"""
-        ad_account = frappe.get_doc('Ads Account Integration', self.select_ad_account)
-        for page in ad_account.fb_pages:
-            if page.page_name == self.selected_facebook_page:
-                return page.page_id
-        frappe.throw(_("Page not found"), title=_("Page Error"))
-
-    def _upload_image_to_meta(self, file_url: str) -> Optional[str]:
-        """Upload & return image_hash"""
         try:
             from frappe_social.ads_manager.providers.meta_ads import MetaAdsProvider
-            file_path = frappe.get_site_path('public', file_url.lstrip('/'))
-            if not os.path.exists(file_path):
-                return None
-            provider = MetaAdsProvider(self.select_ad_account)
-            result = provider.upload_image({"filename": file_path})
-            return result.image_hash if result.success else None
+            
+            account_integration = self.get_account_integration()
+            provider = MetaAdsProvider(account_integration)
+            
+            # Update ad status to PAUSED
+            result = provider._make_request(
+                "POST",
+                f"{self.id}",
+                json_data={"status": "PAUSED"}
+            )
+            
+            self.status = "PAUSED"
+            self.save(ignore_permissions=True)
+            
+            return {"success": True, "message": _("Ad paused")}
         except Exception as e:
-            frappe.log_error(str(e), "Image Upload")
-            return None
+            frappe.log_error(frappe.get_traceback(), "Post Ads - Pause Error")
+            return {"success": False, "message": str(e)}
 
-    def _map_cta_to_meta_format(self, cta: str) -> str:
-        mapping = {
-            "Learn More": "LEARN_MORE",
-            "Shop Now": "SHOP_NOW",
-            "Sign Up": "SIGN_UP"
-        }
-        return mapping.get(cta, "LEARN_MORE")
-
-    def publish_as_ad(self):
-        """Publish Ad (Creative → Ad)"""
+    def resume_ad(self):
+        """Resume the ad on Meta"""
+        if not self.id:
+            frappe.throw(_("No Meta ad ID found"), title=_("Ad Not Published"))
+        
         try:
             from frappe_social.ads_manager.providers.meta_ads import MetaAdsProvider
-
-            self.status = "Publishing"
+            
+            account_integration = self.get_account_integration()
+            provider = MetaAdsProvider(account_integration)
+            
+            # Update ad status to ACTIVE
+            result = provider._make_request(
+                "POST",
+                f"{self.id}",
+                json_data={"status": "ACTIVE"}
+            )
+            
+            self.status = "ACTIVE"
             self.save(ignore_permissions=True)
-
-            provider = MetaAdsProvider(self.select_ad_account)
-
-            # Create Creative
-            creative_payload = self.build_ad_creative_payload()
-            creative_result = provider.create_creative(creative_payload)
-            if not creative_result.success:
-                raise Exception(creative_result.error_message)
-            creative_id = creative_result.creative_id
-
-            # Update child table
-            if self.ad_creative:
-                frappe.db.set_value("Ad Creative", self.ad_creative[0].name, "creative_id", creative_id)
-
-            # Create Ad
-            ad_payload = self.build_ad_payload(creative_id)
-            ad_result = provider.create_ad(ad_payload)
-            if not ad_result.success:
-                raise Exception(ad_result.error_message)
-
-            # Success
-            self.ad_id = ad_result.ad_id
-            self.status = "Published"
-            self.save(ignore_permissions=True)
-
-            return {"success": True, "ad_id": self.ad_id}
-
+            
+            return {"success": True, "message": _("Ad resumed")}
         except Exception as e:
-            self.status = "Failed"
-            self.error_log = str(e)
-            self.save(ignore_permissions=True)
-            frappe.log_error(frappe.get_traceback(), f"Ad Publish Failed - {self.name}")
-            return {"success": False, "error_message": str(e)}
+            frappe.log_error(frappe.get_traceback(), "Post Ads - Resume Error")
+            return {"success": False, "message": str(e)}
+
+    def get_analytics(self):
+        """Get ad performance analytics"""
+        if not self.id:
+            return {
+                "success": False,
+                "message": _("Ad not published yet")
+            }
+        
+        try:
+            from frappe_social.ads_manager.providers.meta_ads import MetaAdsProvider
+            
+            account_integration = self.get_account_integration()
+            provider = MetaAdsProvider(account_integration)
+            
+            # Fetch ad analytics
+            result = provider.fetch_ad_analytics(self.id)
+            
+            if result.success:
+                return {
+                    "success": True,
+                    "metrics": result.metrics
+                }
+            else:
+                return {
+                    "success": False,
+                    "message": result.error_message
+                }
+        except Exception as e:
+            frappe.log_error(frappe.get_traceback(), "Post Ads - Analytics Error")
+            return {
+                "success": False,
+                "message": str(e)
+            }
+
+    # =====================================================
+    # HELPER METHODS
+    # =====================================================
+
+    def get_account_integration(self) -> str:
+        """
+        Get the account integration name from the ad set
+        This is needed to initialize the Meta provider
+        """
+        ad_set = frappe.get_doc('Ad Set', self.select_ad_set)
+        if hasattr(ad_set, 'account_integration'):
+            return ad_set.account_integration
+        
+        # Fallback: try to get from campaign
+        campaign = frappe.get_doc('Marketing Campaign', self.campaign)
+        if hasattr(campaign, 'custom_select_facebook_ad_account'):
+            return campaign.custom_select_facebook_ad_account
+        
+        frappe.throw(
+            _("Could not find Account Integration"),
+            title=_("Configuration Error")
+        )
 
 
 # =====================================================
@@ -235,40 +314,86 @@ class PostAds(Document):
 # =====================================================
 
 @frappe.whitelist()
-def publish_ad(post_name):
-    """Publish Post Ads"""
+def publish_ad(post_ads_name):
+    """Publish an ad to Meta"""
     try:
-        doc = frappe.get_doc("Post Ads", post_name)
-        result = doc.publish_as_ad()
-        return result
-    except Exception as e: 
-        frappe.log_error(str(e), f"Publish Ad Error - {post_name}")
-        return {"success": False, "error_message": str(e)}
+        doc = frappe.get_doc("Post Ads", post_ads_name)
+        return doc.publish_ad()
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "Post Ads - Publish Error")
+        return {"success": False, "message": str(e)}
+
 
 @frappe.whitelist()
-def get_platforms_for_organization(organization):
-    """Get available platforms for an organization"""
-    if not organization:
-        return []
+def pause_ad(post_ads_name):
+    """Pause an ad on Meta"""
+    try:
+        doc = frappe.get_doc("Post Ads", post_ads_name)
+        return doc.pause_ad()
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "Post Ads - Pause Error")
+        return {"success": False, "message": str(e)}
 
-    return frappe.db.get_all(
-        "Ads Account Integration",
-        filters={"organization": organization, "enabled": 1, "connection_status": "Connected"},
-        pluck="platform",
-        distinct=True,
-        order_by="platform asc",
-    )
 
 @frappe.whitelist()
-def get_campaigns_for_account(ad_account):
-    """Get campaigns for account (for form)"""
-    if not ad_account:
+def resume_ad(post_ads_name):
+    """Resume an ad on Meta"""
+    try:
+        doc = frappe.get_doc("Post Ads", post_ads_name)
+        return doc.resume_ad()
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "Post Ads - Resume Error")
+        return {"success": False, "message": str(e)}
+
+
+@frappe.whitelist()
+def get_ad_analytics(post_ads_name):
+    """Get analytics for an ad"""
+    try:
+        doc = frappe.get_doc("Post Ads", post_ads_name)
+        return doc.get_analytics()
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "Post Ads - Analytics Error")
+        return {"success": False, "message": str(e)}
+
+
+@frappe.whitelist()
+def get_campaigns_for_campaign_type(campaign_type="Meta Ads"):
+    """Get available campaigns"""
+    if not campaign_type:
         return []
     
     return frappe.db.get_all(
         "Marketing Campaign",
-        filters={"custom_select_facebook_ad_account": ad_account, "custom_is_meta_ads": 1},
-        pluck="name",
-        distinct=True,
-        order_by="name asc",
+        filters={"custom_is_meta_ads": 1, "docstatus": 0},
+        fields=["name", "title"],
+        order_by="name asc"
+    )
+
+
+@frappe.whitelist()
+def get_ad_sets_for_campaign(campaign):
+    """Get ad sets for a campaign"""
+    if not campaign:
+        return []
+    
+    return frappe.db.get_all(
+        "Ad Set",
+        filters={"campaign": campaign},
+        fields=["name", "title"],
+        order_by="name asc"
+    )
+
+
+@frappe.whitelist()
+def get_creatives_for_ad_set(ad_set):
+    """Get creatives for an ad set"""
+    if not ad_set:
+        return []
+    
+    return frappe.db.get_all(
+        "Ad Creative",
+        filters={"docstatus": 0},
+        fields=["name", "title"],
+        order_by="name asc"
     )

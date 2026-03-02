@@ -56,7 +56,7 @@ def build_campaign_payload(doc) -> dict:
         "objective": doc.custom_campaign_objective,
         # Use the dedicated status Select field (PAUSED / ACTIVE / ARCHIVED).
         # Fall back to PAUSED if somehow blank — Meta requires a valid value.
-        "status": doc.custom_status or "PAUSED",
+        "status": "ACTIVE" if doc.custom_enable_campaign else "PAUSED",
         "buying_type": doc.custom_choose_buying_type or "AUCTION",
         "special_ad_categories": special_ad_categories,
     }

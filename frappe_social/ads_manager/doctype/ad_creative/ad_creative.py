@@ -890,44 +890,168 @@ def get_existing_posts(ad_account: str, page_id: str, limit: int = 50) -> list:
         return []
 
     try:
+        logger.info(f"get_existing_posts called: ad_account={ad_account}, page_id={page_id}, limit={limit}")
+        
         integration = frappe.get_doc("Ads Account Integration", ad_account)
+
+        # Check token expiry first
+        if integration.is_token_expired():
+            frappe.throw(_(
+                "Access token has expired for ad account {0}. "
+                "Please reconnect to refresh the token."
+            ).format(ad_account))
 
         # Find the Page access token for this page
         page_access_token = None
         for asset in (integration.meta_assets or []):
             if asset.get("platform") == "Facebook" and asset.get("page_id") == page_id:
-                page_access_token = asset.get("page_access_token")
-                break
+                page_token_value = asset.get("page_access_token")
+                if page_token_value:
+                    page_access_token = page_token_value
+                    logger.info(f"Found page-specific token in meta_assets for page {page_id}")
+                    break
 
+        # Fall back to account access token if page token not found
         if not page_access_token:
-            # Fall back to account access token
-            page_access_token = integration.get_access_token()
+            try:
+                page_access_token = integration.get_access_token()
+                if page_access_token:
+                    logger.info(f"Using account-level access token from get_access_token()")
+            except Exception as e:
+                logger.error(f"Error retrieving access token: {e}")
+                frappe.throw(_(
+                    "Failed to retrieve access token from ad account. "
+                    "The token may be corrupted. Please reconnect the ad account."
+                ))
 
         if not page_access_token:
             frappe.throw(_(
-                "No access token found for page {0}. "
+                "No valid access token found for ad account {0}. "
+                "Please reconnect the ad account to authenticate."
+            ).format(ad_account))
+
+        # Validate token format (should be alphanumeric, not contain spaces or special chars except pipe)
+        if not isinstance(page_access_token, str) or len(page_access_token.strip()) == 0:
+            logger.error(f"Invalid token format: empty or non-string token")
+            frappe.throw(_(
+                "Access token is invalid (empty or corrupted). "
                 "Please reconnect the ad account."
-            ).format(page_id))
+            ))
+        
+        logger.info(f"Token length: {len(page_access_token)}, starts with: {page_access_token[:10]}...")
 
         settings = frappe.get_single("Social Settings")
         api_version = settings.meta_api_version or "v25.0"
 
         url = f"https://graph.facebook.com/{api_version}/{page_id}/posts"
+        
+        logger.info(f"Fetching posts from URL: {url}")
+        logger.info(f"Using API version: {api_version}")
+        
+        # Define fields to request – prioritize essential fields
+        # Try full set first, but be prepared to FALL_BACK to basic fields if needed
+        fields_list = [
+            "id",              # Required
+            "message",         # Post text (may be in 'story' if from feed)
+            "story",           # System stories (some posts are feed items)
+            "created_time",    # Post timestamp
+            "type",            # Media type (image, video, status)
+            "picture",         # Thumbnail (for single images/videos)
+            "permalink_url",   # Link to post
+            "status_type",     # Publication source (app story, wall post, etc.)
+        ]
+        
         params = {
             "access_token": page_access_token,
-            "fields":       "id,message,story,created_time,type,picture,permalink_url,status_type",
+            "fields":       ",".join(fields_list),
             "limit":        int(limit),
         }
 
+        logger.info(f"Fetching posts from {url} with api_version={api_version}")
         response = requests.get(url, params=params, timeout=30)
-        response.raise_for_status()
-        data = response.json()
-
+        
+        # If we get a 400, it might be due to missing fields – try with minimal fields
+        if response.status_code == 400:
+            logger.warning(f"Full fields request failed with 400. Trying minimal fields...")
+            minimal_params = {
+                "access_token": page_access_token,
+                "fields":       "id,message,created_time,picture,permalink_url",
+                "limit":        int(limit),
+            }
+            response = requests.get(url, params=minimal_params, timeout=30)
+            logger.info(f"Retried with minimal fields. Status: {response.status_code}")
+        
+        # If still 400, try with just basic fields (no pictures)
+        if response.status_code == 400:
+            logger.warning(f"Minimal fields also failed with 400. Trying ID and message only...")
+            basic_params = {
+                "access_token": page_access_token,
+                "fields":       "id,message,created_time",
+                "limit":        int(limit),
+            }
+            response = requests.get(url, params=basic_params, timeout=30)
+            logger.info(f"Retried with basic fields. Status: {response.status_code}")
+        
+        # Try to parse response BEFORE raising error to capture Meta's error message
+        try:
+            data = response.json()
+        except Exception as json_err:
+            logger.error(f"Failed to parse JSON response: {json_err}")
+            logger.error(f"Response text: {response.text}")
+            data = {}
+        
+        # Check for Meta API errors
         if "error" in data:
             err = data["error"]
+            error_msg = err.get("message", "Unknown error")
+            error_code = err.get("code", "Unknown")
+            logger.error(f"Meta API Error {error_code}: {error_msg}")
+            
+            # Special handling for token errors
+            if "access token" in error_msg.lower() or error_code == 190:
+                frappe.throw(_(
+                    "Access token is invalid or expired. "
+                    "Please reconnect your ad account by going to Ads Account Integration and reauthorizing."
+                ))
+            
             frappe.throw(_(
                 "Meta API error fetching posts: [{0}] {1}"
-            ).format(err.get("code"), err.get("message")))
+            ).format(error_code, error_msg))
+        
+        # Handle any HTTP errors
+        if not response.ok:
+            logger.error(f"HTTP {response.status_code} error fetching posts")
+            logger.error(f"Response body: {response.text[:1000]}")
+            
+            # Try to parse error from response
+            try:
+                error_data = response.json()
+                if "error" in error_data:
+                    err = error_data["error"]
+                    error_msg = err.get("message", "Unknown error")
+                    error_code = err.get("code", response.status_code)
+                    error_subcode = err.get("error_subcode", "")
+                    
+                    # Special handling for token errors
+                    if "access token" in error_msg.lower() or error_code == 190:
+                        frappe.throw(_(
+                            "Access token is invalid or expired. "
+                            "Please reconnect your ad account by going to Ads Account Integration and reauthorizing."
+                        ))
+                    
+                    detailed = f"[{error_code}] {error_msg}"
+                    if error_subcode:
+                        detailed += f" (subcode: {error_subcode})"
+                    
+                    logger.error(f"Meta error details: {detailed}")
+                    frappe.throw(_(
+                        "Meta API error: {0}"
+                    ).format(detailed))
+            except Exception as parse_err:
+                logger.error(f"Could not parse error response: {parse_err}")
+            
+            # Fallback to HTTP error
+            response.raise_for_status()
 
         posts = []
         for post in data.get("data", []):
@@ -950,9 +1074,34 @@ def get_existing_posts(ad_account: str, page_id: str, limit: int = 50) -> list:
 
     except requests.RequestException as e:
         logger.error(f"Network error fetching posts: {e}")
-        frappe.throw(_("Failed to fetch posts from Facebook. Check your connection."))
+        try:
+            # Try to extract Meta's error message from response
+            error_data = e.response.json() if hasattr(e, 'response') and e.response else {}
+            if "error" in error_data:
+                meta_error = error_data["error"]
+                error_msg = meta_error.get("message", str(e))
+                error_code = meta_error.get("code", "Unknown")
+                
+                # Special handling for token errors
+                if "access token" in error_msg.lower() or error_code == 190:
+                    frappe.throw(_(
+                        "Access token is invalid or expired. "
+                        "Please reconnect your ad account by going to Ads Account Integration and reauthorizing."
+                    ))
+                
+                frappe.throw(_(
+                    "Failed to fetch posts from Facebook: {0}"
+                ).format(error_msg))
+        except frappe.ValidationError:
+            raise  # Re-raise Frappe errors
+        except Exception as parse_err:
+            logger.error(f"Could not parse error response: {parse_err}")
+        frappe.throw(_("Failed to fetch posts from Facebook. Check your connection and access permissions."))
     except frappe.DoesNotExistError:
         frappe.throw(_("Ad account not found: {0}").format(ad_account))
+    except frappe.ValidationError:
+        # Re-raise Frappe validation errors as-is (includes our custom error messages)
+        raise
     except Exception as e:
         logger.error(f"Error retrieving posts: {e}")
         frappe.throw(_("Error retrieving posts: {0}").format(str(e)))

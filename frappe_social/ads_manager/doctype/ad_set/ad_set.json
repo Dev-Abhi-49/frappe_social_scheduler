@@ -1,487 +1,517 @@
 {
-    "actions": [],
-    "allow_rename": 1,
-    "autoname": "format:AD-SET-{ad_set_name}",
-    "creation": "2026-01-07 20:45:11.610681",
-    "doctype": "DocType",
-    "engine": "InnoDB",
-    "field_order": [
-        "enable_ad_set",
-        "basic_info_section",
-        "ad_set_name",
-        "ad_lable",
-        "column_break_xlfk",
-        "campaign",
-        "status",
-        "section_break_terz",
-        "performance_goal",
-        "optimization_sub_event",
-        "column_break_npzm",
-        "billing_event",
-        "multi_optimization_goal_weight",
-        "automatic_manual_state",
-        "section_break_aixe",
-        "budget_type_dailylifetime",
-        "daily_budget",
-        "daily_spend_cap",
-        "daily_min_spend_target",
-        "daily_impressions",
-        "column_break_zfiq",
-        "amount",
-        "lifetime_budget",
-        "lifetime_spend_cap",
-        "lifetime_min_spend_target",
-        "lifetime_impressions",
-        "section_break_pcuu",
-        "bid_strategy",
-        "column_break_vbmg",
-        "bid_amount",
-        "section_break_zdvu",
-        "start_date_and_time",
-        "column_break_ohoy",
-        "end_date_and_time",
-        "section_break_pvbe",
-        "ad_set_schedule",
-        "target_section",
-        "age_min",
-        "gender",
-        "country",
-        "column_break_dlmy",
-        "age_max",
-        "device_platforms",
-        "language",
-        "section_break_uqum",
-        "is_dynamic_creative",
-        "destination_type",
-        "section_break_zjpr",
-        "budget_scheduling",
-        "time_period_for_budget_increase",
-        "section_break_jmry",
-        "budget_schedulig_spec",
-        "section_break_wpqf",
-        "frequency_control_specs",
-        "section_break_xnpp",
-        "adset_id",
-        "section_break_nbnb",
-        "anchor_event_attribution_window_days",
-        "table_qcon",
-        "section_break_buqv",
-        "direct_install_devices",
-        "in_stream_skippable_excluded",
-        "smart_pse_enabled",
-        "value_rules_applied",
-        "product_set_optimization",
-        "is_sac_cfca_certified"
-    ],
-    "fields": [
-        {
-            "fieldname": "billing_event",
-            "fieldtype": "Select",
-            "label": "Billing Event",
-            "options": "\nAPP_INSTALLS\nIMPRESSIONS\nLINK_CLICKS\nNONE\nOFFER_CLAIMS\nPAGE_LIKES\nPOST_ENGAGEMENT\nTHRUPLAY\nPURCHASE\nLISTING_INTERACTION"
-        },
-        {
-            "depends_on": "eval:[\"LOWEST_COST_WITH_BID_CAP\",\"COST_CAP\"].includes(doc.bid_strategy)",
-            "fieldname": "bid_amount",
-            "fieldtype": "Currency",
-            "label": "Bid Amount"
-        },
-        {
-            "fieldname": "adset_id",
-            "fieldtype": "Data",
-            "label": "Adset ID",
-            "read_only": 1
-        },
-        {
-            "fieldname": "campaign",
-            "fieldtype": "Link",
-            "label": "Select Campaign",
-            "options": "Marketing Campaign"
-        },
-        {
-            "fieldname": "performance_goal",
-            "fieldtype": "Select",
-            "label": "Optimization Goal",
-            "options": "\nNONE\nAPP_INSTALLS\nAD_RECALL_LIFT\nENGAGED_USERS\nEVENT_RESPONSES IMPRESSIONS\nLEAD_GENERATION\nQUALITY_LEAD\nLINK_CLICKS\nOFFSITE_CONVERSIONS\nPAGE_LIKES\nPOST_ENGAGEMENT\nQUALITY_CALL\nREACH\nLANDING_PAGE_VIEWS\nVISIT_INSTAGRAM_PROFILE\nENGAGED_PAGE_VIEWS\nVALUE\nTHRUPLAY\nDERIVED_EVENTS\nAPP_INSTALLS_AND_OFFSITE_CONVERSIONS\nCONVERSATIONS\nIN_APP_VALUE\nMESSAGING_PURCHASE_CONVERSION\nSUBSCRIBERS\nREMINDERS_SET\nMEANINGFUL_CALL_ATTEMPT\nPROFILE_VISIT\nPROFILE_AND_PAGE_ENGAGEMENT\nADVERTISER_SILOED_VALUE\nAUTOMATIC_OBJECTIVE\nMESSAGING_APPOINTMENT_CONVERSION"
-        },
-        {
-            "default": "LOWEST_COST_WITHOUT_CAP",
-            "fieldname": "bid_strategy",
-            "fieldtype": "Select",
-            "label": "Bid Strategy",
-            "options": "NONE\nLOWEST_COST_WITHOUT_CAP\nLOWEST_COST_WITH_BID_CAP\nCOST_CAP\nLOWEST_COST_WITH_MIN_ROAS"
-        },
-        {
-            "default": "0",
-            "fieldname": "enable_ad_set",
-            "fieldtype": "Check",
-            "label": "Enable Ad Set"
-        },
-        {
-            "fieldname": "column_break_xlfk",
-            "fieldtype": "Column Break"
-        },
-        {
-            "fieldname": "basic_info_section",
-            "fieldtype": "Section Break",
-            "label": "Basic Info"
-        },
-        {
-            "fieldname": "destination_type",
-            "fieldtype": "Select",
-            "label": "Destination Type",
-            "options": "\nWEBSITE\nAPP\nMESSENGER\nAPPLINKS_AUTOMATIC\nWHATSAPP\nINSTAGRAM_DIRECT\nFACEBOOK\nMESSAGING_MESSENGER_WHATSAPP\nMESSAGING_INSTAGRAM_DIRECT_MESSENGER\nMESSAGING_INSTAGRAM_DIRECT_MESSENGER_WHATSAPP\nMESSAGING_INSTAGRAM_DIRECT_WHATSAPP\nSHOP_AUTOMATIC\nON_AD\nON_POST\nON_EVENT\nON_VIDEO\nON_PAGE\nINSTAGRAM_PROFILE\nFACEBOOK_PAGE\nINSTAGRAM_PROFILE_AND_FACEBOOK_PAGE\nINSTAGRAM_LIVE\nFACEBOOK_LIVE\nIMAGINE"
-        },
-        {
-            "fieldname": "target_section",
-            "fieldtype": "Section Break",
-            "label": "Target"
-        },
-        {
-            "default": "18",
-            "fieldname": "age_min",
-            "fieldtype": "Int",
-            "label": "Age Min"
-        },
-        {
-            "default": "65",
-            "fieldname": "age_max",
-            "fieldtype": "Int",
-            "label": "Age Max"
-        },
-        {
-            "default": "All",
-            "fieldname": "gender",
-            "fieldtype": "Select",
-            "label": "Gender",
-            "options": "Male\nFemale\nAll",
-            "sort_options": 1
-        },
-        {
-            "fieldname": "column_break_dlmy",
-            "fieldtype": "Column Break"
-        },
-        {
-            "fieldname": "ad_set_name",
-            "fieldtype": "Data",
-            "label": "Ad Set Name"
-        },
-        {
-            "fieldname": "section_break_xnpp",
-            "fieldtype": "Section Break"
-        },
-        {
-            "fieldname": "section_break_terz",
-            "fieldtype": "Section Break"
-        },
-        {
-            "description": "Required at ad set level if NOT set at campaign level.",
-            "fieldname": "section_break_aixe",
-            "fieldtype": "Section Break",
-            "label": "Budget"
-        },
-        {
-            "fieldname": "budget_type_dailylifetime",
-            "fieldtype": "Select",
-            "label": "Budget Type (Daily/Lifetime)",
-            "options": "\nDaily Budget\nLifetime Budget"
-        },
-        {
-            "fieldname": "column_break_zfiq",
-            "fieldtype": "Column Break"
-        },
-        {
-            "fieldname": "amount",
-            "fieldtype": "Currency",
-            "label": "Amount"
-        },
-        {
-            "fieldname": "start_date_and_time",
-            "fieldtype": "Datetime",
-            "label": "Start Date and Time"
-        },
-        {
-            "fieldname": "end_date_and_time",
-            "fieldtype": "Datetime",
-            "label": "End Date and Time"
-        },
-        {
-            "fieldname": "section_break_zjpr",
-            "fieldtype": "Section Break",
-            "hidden": 1,
-            "label": "Budget Schedule"
-        },
-        {
-            "default": "0",
-            "fieldname": "budget_scheduling",
-            "fieldtype": "Check",
-            "label": "Budget scheduling"
-        },
-        {
-            "depends_on": "eval:doc.budget_scheduling == 1",
-            "fieldname": "time_period_for_budget_increase",
-            "fieldtype": "Table",
-            "label": "Time period for budget increase",
-            "options": "Time Period for Budget"
-        },
-        {
-            "fieldname": "column_break_npzm",
-            "fieldtype": "Column Break"
-        },
-        {
-            "default": "All Devices",
-            "fieldname": "device_platforms",
-            "fieldtype": "Select",
-            "label": "Devices Platform",
-            "options": "All Devices\nMobile\nDesktop"
-        },
-        {
-            "fieldname": "section_break_zdvu",
-            "fieldtype": "Section Break"
-        },
-        {
-            "fieldname": "column_break_ohoy",
-            "fieldtype": "Column Break"
-        },
-        {
-            "fieldname": "section_break_uqum",
-            "fieldtype": "Section Break"
-        },
-        {
-            "default": "0",
-            "fieldname": "is_dynamic_creative",
-            "fieldtype": "Check",
-            "label": "Is Dynamic Creative"
-        },
-        {
-            "default": "PAUSED",
-            "fieldname": "status",
-            "fieldtype": "Select",
-            "hidden": 1,
-            "label": "Status",
-            "options": "ACTIVE\nPAUSED",
-            "read_only": 1
-        },
-        {
-            "fieldname": "ad_lable",
-            "fieldtype": "Table",
-            "label": "Ad Lable",
-            "options": "Ad Label"
-        },
-        {
-            "fieldname": "section_break_jmry",
-            "fieldtype": "Section Break"
-        },
-        {
-            "fieldname": "budget_schedulig_spec",
-            "fieldtype": "Table",
-            "label": "Budget Schedulig Spec",
-            "options": "Campaign Budget Schedule Spec"
-        },
-        {
-            "fieldname": "section_break_nbnb",
-            "fieldtype": "Section Break"
-        },
-        {
-            "fieldname": "automatic_manual_state",
-            "fieldtype": "Select",
-            "label": "Automatic Manual State",
-            "options": "\nUNSET\nAUTOMATIC\nMANUAL"
-        },
-        {
-            "fieldname": "anchor_event_attribution_window_days",
-            "fieldtype": "Int",
-            "label": "Anchor Event Attribution Window Days"
-        },
-        {
-            "fieldname": "daily_spend_cap",
-            "fieldtype": "Currency",
-            "label": "Daily Spend Cap"
-        },
-        {
-            "fieldname": "lifetime_spend_cap",
-            "fieldtype": "Currency",
-            "label": "Lifetime Spend Cap"
-        },
-        {
-            "fieldname": "table_qcon",
-            "fieldtype": "Table",
-            "label": "Attribution Spec",
-            "options": "Attribution Spec"
-        },
-        {
-            "fieldname": "country",
-            "fieldtype": "Table",
-            "label": "Country",
-            "options": "Countries"
-        },
-        {
-            "fieldname": "language",
-            "fieldtype": "Table",
-            "label": "Language",
-            "options": "Languages"
-        },
-        {
-            "fieldname": "optimization_sub_event",
-            "fieldtype": "Select",
-            "label": "Optimization Sub Event",
-            "options": "\nNONE\nVIDEO_SOUND_ON\nTRIP_CONSIDERATION\nTRAVEL_INTENT\nTRAVEL_INTENT_NO_DESTINATION_INTENT\nTRAVEL_INTENT_BUCKET_01\nTRAVEL_INTENT_BUCKET_02\nTRAVEL_INTENT_BUCKET_03\nTRAVEL_INTENT_BUCKET_04\nTRAVEL_INTENT_BUCKET_05\nPOST_INTERACTION"
-        },
-        {
-            "fieldname": "multi_optimization_goal_weight",
-            "fieldtype": "Select",
-            "label": "Multi Optimization Goal Weight",
-            "options": "\nUNDEFINED\nBALANCED\nPREFER_INSTALL\nPREFER_EVENT"
-        },
-        {
-            "fieldname": "daily_budget",
-            "fieldtype": "Currency",
-            "label": "Daily Budget"
-        },
-        {
-            "fieldname": "daily_min_spend_target",
-            "fieldtype": "Currency",
-            "label": "Daily Min Spend Target"
-        },
-        {
-            "fieldname": "daily_impressions",
-            "fieldtype": "Int",
-            "label": "Daily Impressions"
-        },
-        {
-            "fieldname": "lifetime_budget",
-            "fieldtype": "Currency",
-            "label": "Lifetime Budget"
-        },
-        {
-            "fieldname": "lifetime_min_spend_target",
-            "fieldtype": "Currency",
-            "label": "Lifetime Min Spend Target"
-        },
-        {
-            "fieldname": "lifetime_impressions",
-            "fieldtype": "Int",
-            "label": "Lifetime Impressions"
-        },
-        {
-            "fieldname": "section_break_pcuu",
-            "fieldtype": "Section Break"
-        },
-        {
-            "fieldname": "column_break_vbmg",
-            "fieldtype": "Column Break"
-        },
-        {
-            "fieldname": "section_break_pvbe",
-            "fieldtype": "Section Break"
-        },
-        {
-            "fieldname": "ad_set_schedule",
-            "fieldtype": "Table",
-            "label": "Ad Set Schedule",
-            "options": "Ad Scheduling"
-        },
-        {
-            "fieldname": "section_break_wpqf",
-            "fieldtype": "Section Break"
-        },
-        {
-            "fieldname": "frequency_control_specs",
-            "fieldtype": "Table",
-            "label": "Frequency Control Specs",
-            "options": "Frequency Control Specs"
-        },
-        {
-            "fieldname": "section_break_buqv",
-            "fieldtype": "Section Break"
-        },
-        {
-            "default": "0",
-            "fieldname": "direct_install_devices",
-            "fieldtype": "Check",
-            "label": "Direct Install Devices"
-        },
-        {
-            "default": "0",
-            "fieldname": "in_stream_skippable_excluded",
-            "fieldtype": "Check",
-            "label": "In-stream Skippable Excluded"
-        },
-        {
-            "default": "0",
-            "fieldname": "smart_pse_enabled",
-            "fieldtype": "Check",
-            "label": "Smart PSE Enabled"
-        },
-        {
-            "default": "0",
-            "fieldname": "value_rules_applied",
-            "fieldtype": "Check",
-            "label": "Value Rules Applied"
-        },
-        {
-            "default": "0",
-            "fieldname": "product_set_optimization",
-            "fieldtype": "Check",
-            "label": "Product Set Optimization"
-        },
-        {
-            "default": "0",
-            "fieldname": "is_sac_cfca_certified",
-            "fieldtype": "Check",
-            "label": "Is SAC CFCA Certified"
-        }
-    ],
-    "grid_page_length": 50,
-    "index_web_pages_for_search": 1,
-    "links": [],
-    "modified": "2026-02-28 20:54:10.229691",
-    "modified_by": "Administrator",
-    "module": "Ads Manager",
-    "name": "Ad Set",
-    "naming_rule": "Expression",
-    "owner": "Administrator",
-    "permissions": [
-        {
-            "create": 1,
-            "delete": 1,
-            "email": 1,
-            "export": 1,
-            "print": 1,
-            "read": 1,
-            "report": 1,
-            "role": "System Manager",
-            "share": 1,
-            "write": 1
-        },
-        {
-            "create": 1,
-            "delete": 1,
-            "email": 1,
-            "export": 1,
-            "print": 1,
-            "read": 1,
-            "report": 1,
-            "role": "Scheduler",
-            "share": 1,
-            "write": 1
-        },
-        {
-            "create": 1,
-            "delete": 1,
-            "email": 1,
-            "export": 1,
-            "print": 1,
-            "read": 1,
-            "report": 1,
-            "role": "Administrator",
-            "share": 1,
-            "write": 1
-        }
-    ],
-    "row_format": "Dynamic",
-    "rows_threshold_for_grid_search": 20,
-    "sort_field": "modified",
-    "sort_order": "DESC",
-    "states": []
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:AD-SET-{ad_set_name}",
+ "creation": "2026-01-07 20:45:11.610681",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "enable_ad_set",
+  "basic_info_section",
+  "ad_set_name",
+  "ad_lable",
+  "column_break_xlfk",
+  "campaign",
+  "status",
+  "section_break_terz",
+  "performance_goal",
+  "column_break_npzm",
+  "billing_event",
+  "section_break_wszw",
+  "optimization_sub_event",
+  "multi_optimization_goal_weight",
+  "column_break_drak",
+  "automatic_manual_state",
+  "section_break_aixe",
+  "budget_type_dailylifetime",
+  "column_break_zfiq",
+  "amount",
+  "section_break_tpti",
+  "daily_budget",
+  "daily_impressions",
+  "daily_min_spend_target",
+  "daily_spend_cap",
+  "column_break_hxnp",
+  "lifetime_budget",
+  "lifetime_impressions",
+  "lifetime_spend_cap",
+  "lifetime_min_spend_target",
+  "section_break_pcuu",
+  "bid_strategy",
+  "column_break_vbmg",
+  "bid_amount",
+  "section_break_zdvu",
+  "start_date_and_time",
+  "column_break_ohoy",
+  "end_date_and_time",
+  "section_break_pvbe",
+  "ad_set_schedule",
+  "target_section",
+  "age_min",
+  "gender",
+  "country",
+  "column_break_dlmy",
+  "age_max",
+  "device_platforms",
+  "language",
+  "section_break_uqum",
+  "is_dynamic_creative",
+  "destination_type",
+  "section_break_zjpr",
+  "budget_scheduling",
+  "time_period_for_budget_increase",
+  "section_break_jmry",
+  "budget_schedulig_spec",
+  "section_break_wpqf",
+  "frequency_control_specs",
+  "section_break_xnpp",
+  "adset_id",
+  "section_break_nbnb",
+  "anchor_event_attribution_window_days",
+  "table_qcon",
+  "section_break_buqv",
+  "direct_install_devices",
+  "in_stream_skippable_excluded",
+  "smart_pse_enabled",
+  "value_rules_applied",
+  "product_set_optimization",
+  "is_sac_cfca_certified"
+ ],
+ "fields": [
+  {
+   "fieldname": "billing_event",
+   "fieldtype": "Select",
+   "label": "Billing Event",
+   "options": "\nAPP_INSTALLS\nIMPRESSIONS\nLINK_CLICKS\nNONE\nOFFER_CLAIMS\nPAGE_LIKES\nPOST_ENGAGEMENT\nTHRUPLAY\nPURCHASE\nLISTING_INTERACTION"
+  },
+  {
+   "depends_on": "eval:[\"LOWEST_COST_WITH_BID_CAP\",\"COST_CAP\"].includes(doc.bid_strategy)",
+   "fieldname": "bid_amount",
+   "fieldtype": "Currency",
+   "label": "Bid Amount"
+  },
+  {
+   "fieldname": "adset_id",
+   "fieldtype": "Data",
+   "label": "Adset ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "campaign",
+   "fieldtype": "Link",
+   "label": "Select Campaign",
+   "options": "Marketing Campaign"
+  },
+  {
+   "fieldname": "performance_goal",
+   "fieldtype": "Select",
+   "label": "Optimization Goal",
+   "options": "\nNONE\nAPP_INSTALLS\nAD_RECALL_LIFT\nENGAGED_USERS\nEVENT_RESPONSES IMPRESSIONS\nLEAD_GENERATION\nQUALITY_LEAD\nLINK_CLICKS\nOFFSITE_CONVERSIONS\nPAGE_LIKES\nPOST_ENGAGEMENT\nQUALITY_CALL\nREACH\nLANDING_PAGE_VIEWS\nVISIT_INSTAGRAM_PROFILE\nENGAGED_PAGE_VIEWS\nVALUE\nTHRUPLAY\nDERIVED_EVENTS\nAPP_INSTALLS_AND_OFFSITE_CONVERSIONS\nCONVERSATIONS\nIN_APP_VALUE\nMESSAGING_PURCHASE_CONVERSION\nSUBSCRIBERS\nREMINDERS_SET\nMEANINGFUL_CALL_ATTEMPT\nPROFILE_VISIT\nPROFILE_AND_PAGE_ENGAGEMENT\nADVERTISER_SILOED_VALUE\nAUTOMATIC_OBJECTIVE\nMESSAGING_APPOINTMENT_CONVERSION"
+  },
+  {
+   "default": "LOWEST_COST_WITHOUT_CAP",
+   "fieldname": "bid_strategy",
+   "fieldtype": "Select",
+   "label": "Bid Strategy",
+   "options": "NONE\nLOWEST_COST_WITHOUT_CAP\nLOWEST_COST_WITH_BID_CAP\nCOST_CAP\nLOWEST_COST_WITH_MIN_ROAS"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_ad_set",
+   "fieldtype": "Check",
+   "label": "Enable Ad Set"
+  },
+  {
+   "fieldname": "column_break_xlfk",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "basic_info_section",
+   "fieldtype": "Section Break",
+   "label": "Basic Info"
+  },
+  {
+   "fieldname": "destination_type",
+   "fieldtype": "Select",
+   "label": "Destination Type",
+   "options": "\nWEBSITE\nAPP\nMESSENGER\nAPPLINKS_AUTOMATIC\nWHATSAPP\nINSTAGRAM_DIRECT\nFACEBOOK\nMESSAGING_MESSENGER_WHATSAPP\nMESSAGING_INSTAGRAM_DIRECT_MESSENGER\nMESSAGING_INSTAGRAM_DIRECT_MESSENGER_WHATSAPP\nMESSAGING_INSTAGRAM_DIRECT_WHATSAPP\nSHOP_AUTOMATIC\nON_AD\nON_POST\nON_EVENT\nON_VIDEO\nON_PAGE\nINSTAGRAM_PROFILE\nFACEBOOK_PAGE\nINSTAGRAM_PROFILE_AND_FACEBOOK_PAGE\nINSTAGRAM_LIVE\nFACEBOOK_LIVE\nIMAGINE"
+  },
+  {
+   "fieldname": "target_section",
+   "fieldtype": "Section Break",
+   "label": "Target"
+  },
+  {
+   "default": "18",
+   "fieldname": "age_min",
+   "fieldtype": "Int",
+   "label": "Age Min"
+  },
+  {
+   "default": "65",
+   "fieldname": "age_max",
+   "fieldtype": "Int",
+   "label": "Age Max"
+  },
+  {
+   "default": "All",
+   "fieldname": "gender",
+   "fieldtype": "Select",
+   "label": "Gender",
+   "options": "Male\nFemale\nAll",
+   "sort_options": 1
+  },
+  {
+   "fieldname": "column_break_dlmy",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "ad_set_name",
+   "fieldtype": "Data",
+   "label": "Ad Set Name"
+  },
+  {
+   "fieldname": "section_break_xnpp",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "section_break_terz",
+   "fieldtype": "Section Break"
+  },
+  {
+   "description": "Required at ad set level if NOT set at campaign level.",
+   "fieldname": "section_break_aixe",
+   "fieldtype": "Section Break",
+   "label": "Budget"
+  },
+  {
+   "fieldname": "budget_type_dailylifetime",
+   "fieldtype": "Select",
+   "label": "Budget Type (Daily/Lifetime)",
+   "options": "\nDaily Budget\nLifetime Budget"
+  },
+  {
+   "fieldname": "column_break_zfiq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "label": "Amount"
+  },
+  {
+   "fieldname": "start_date_and_time",
+   "fieldtype": "Datetime",
+   "label": "Start Date and Time"
+  },
+  {
+   "fieldname": "end_date_and_time",
+   "fieldtype": "Datetime",
+   "label": "End Date and Time"
+  },
+  {
+   "fieldname": "section_break_zjpr",
+   "fieldtype": "Section Break",
+   "hidden": 1,
+   "label": "Budget Schedule"
+  },
+  {
+   "default": "0",
+   "fieldname": "budget_scheduling",
+   "fieldtype": "Check",
+   "label": "Budget scheduling"
+  },
+  {
+   "depends_on": "eval:doc.budget_scheduling == 1",
+   "fieldname": "time_period_for_budget_increase",
+   "fieldtype": "Table",
+   "label": "Time period for budget increase",
+   "options": "Time Period for Budget"
+  },
+  {
+   "fieldname": "column_break_npzm",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "All Devices",
+   "fieldname": "device_platforms",
+   "fieldtype": "Select",
+   "label": "Devices Platform",
+   "options": "All Devices\nMobile\nDesktop"
+  },
+  {
+   "fieldname": "section_break_zdvu",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_ohoy",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_uqum",
+   "fieldtype": "Section Break",
+   "hidden": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_dynamic_creative",
+   "fieldtype": "Check",
+   "label": "Is Dynamic Creative"
+  },
+  {
+   "default": "PAUSED",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Status",
+   "options": "ACTIVE\nPAUSED",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ad_lable",
+   "fieldtype": "Table",
+   "hidden": 1,
+   "label": "Ad Lable",
+   "options": "Ad Label"
+  },
+  {
+   "fieldname": "section_break_jmry",
+   "fieldtype": "Section Break",
+   "hidden": 1
+  },
+  {
+   "fieldname": "budget_schedulig_spec",
+   "fieldtype": "Table",
+   "label": "Budget Schedulig Spec",
+   "options": "Campaign Budget Schedule Spec"
+  },
+  {
+   "fieldname": "section_break_nbnb",
+   "fieldtype": "Section Break",
+   "hidden": 1
+  },
+  {
+   "fieldname": "automatic_manual_state",
+   "fieldtype": "Select",
+   "label": "Automatic Manual State",
+   "options": "\nUNSET\nAUTOMATIC\nMANUAL"
+  },
+  {
+   "fieldname": "anchor_event_attribution_window_days",
+   "fieldtype": "Int",
+   "label": "Anchor Event Attribution Window Days"
+  },
+  {
+   "fieldname": "daily_spend_cap",
+   "fieldtype": "Currency",
+   "label": "Daily Spend Cap"
+  },
+  {
+   "fieldname": "lifetime_spend_cap",
+   "fieldtype": "Currency",
+   "label": "Lifetime Spend Cap"
+  },
+  {
+   "fieldname": "table_qcon",
+   "fieldtype": "Table",
+   "label": "Attribution Spec",
+   "options": "Attribution Spec"
+  },
+  {
+   "fieldname": "country",
+   "fieldtype": "Table",
+   "label": "Country",
+   "options": "Countries"
+  },
+  {
+   "fieldname": "language",
+   "fieldtype": "Table",
+   "hidden": 1,
+   "label": "Language",
+   "options": "Languages"
+  },
+  {
+   "fieldname": "optimization_sub_event",
+   "fieldtype": "Select",
+   "label": "Optimization Sub Event",
+   "options": "\nNONE\nVIDEO_SOUND_ON\nTRIP_CONSIDERATION\nTRAVEL_INTENT\nTRAVEL_INTENT_NO_DESTINATION_INTENT\nTRAVEL_INTENT_BUCKET_01\nTRAVEL_INTENT_BUCKET_02\nTRAVEL_INTENT_BUCKET_03\nTRAVEL_INTENT_BUCKET_04\nTRAVEL_INTENT_BUCKET_05\nPOST_INTERACTION"
+  },
+  {
+   "fieldname": "multi_optimization_goal_weight",
+   "fieldtype": "Select",
+   "label": "Multi Optimization Goal Weight",
+   "options": "\nUNDEFINED\nBALANCED\nPREFER_INSTALL\nPREFER_EVENT"
+  },
+  {
+   "fieldname": "daily_budget",
+   "fieldtype": "Currency",
+   "label": "Daily Budget"
+  },
+  {
+   "fieldname": "daily_min_spend_target",
+   "fieldtype": "Currency",
+   "label": "Daily Min Spend Target"
+  },
+  {
+   "fieldname": "daily_impressions",
+   "fieldtype": "Int",
+   "label": "Daily Impressions"
+  },
+  {
+   "fieldname": "lifetime_budget",
+   "fieldtype": "Currency",
+   "label": "Lifetime Budget"
+  },
+  {
+   "fieldname": "lifetime_min_spend_target",
+   "fieldtype": "Currency",
+   "label": "Lifetime Min Spend Target"
+  },
+  {
+   "fieldname": "lifetime_impressions",
+   "fieldtype": "Int",
+   "label": "Lifetime Impressions"
+  },
+  {
+   "fieldname": "section_break_pcuu",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_vbmg",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_pvbe",
+   "fieldtype": "Section Break",
+   "hidden": 1
+  },
+  {
+   "fieldname": "ad_set_schedule",
+   "fieldtype": "Table",
+   "label": "Ad Set Schedule",
+   "options": "Ad Scheduling"
+  },
+  {
+   "fieldname": "section_break_wpqf",
+   "fieldtype": "Section Break",
+   "hidden": 1
+  },
+  {
+   "fieldname": "frequency_control_specs",
+   "fieldtype": "Table",
+   "label": "Frequency Control Specs",
+   "options": "Frequency Control Specs"
+  },
+  {
+   "fieldname": "section_break_buqv",
+   "fieldtype": "Section Break",
+   "hidden": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "direct_install_devices",
+   "fieldtype": "Check",
+   "label": "Direct Install Devices"
+  },
+  {
+   "default": "0",
+   "fieldname": "in_stream_skippable_excluded",
+   "fieldtype": "Check",
+   "label": "In-stream Skippable Excluded"
+  },
+  {
+   "default": "0",
+   "fieldname": "smart_pse_enabled",
+   "fieldtype": "Check",
+   "label": "Smart PSE Enabled"
+  },
+  {
+   "default": "0",
+   "fieldname": "value_rules_applied",
+   "fieldtype": "Check",
+   "label": "Value Rules Applied"
+  },
+  {
+   "default": "0",
+   "fieldname": "product_set_optimization",
+   "fieldtype": "Check",
+   "label": "Product Set Optimization"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_sac_cfca_certified",
+   "fieldtype": "Check",
+   "label": "Is SAC CFCA Certified"
+  },
+  {
+   "fieldname": "section_break_tpti",
+   "fieldtype": "Section Break",
+   "hidden": 1
+  },
+  {
+   "fieldname": "column_break_hxnp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_wszw",
+   "fieldtype": "Section Break",
+   "hidden": 1
+  },
+  {
+   "fieldname": "column_break_drak",
+   "fieldtype": "Column Break"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-03-02 09:17:02.670610",
+ "modified_by": "Administrator",
+ "module": "Ads Manager",
+ "name": "Ad Set",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Scheduler",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Administrator",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
 }

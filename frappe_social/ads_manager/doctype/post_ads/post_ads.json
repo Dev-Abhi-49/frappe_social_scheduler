@@ -5,28 +5,22 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "enable_ad",
+  "section_break_foek",
   "ad_name",
-  "platform",
-  "campaign",
   "column_break_kxpe",
-  "organization",
-  "select_ad_account",
+  "campaign",
   "status",
   "section_break_owqn",
   "partnership_ad",
   "section_break_fqjy",
   "select_ad_set",
-  "section_break_cgkw",
-  "html",
-  "post_details_section",
-  "content",
-  "character_limit",
-  "column_break_qxgh",
-  "media",
+  "column_break_dnls",
+  "select_ad_creative",
   "section_break_qrje",
   "schedule_time",
-  "column_break_wsas",
-  "id"
+  "id",
+  "column_break_wsas"
  ],
  "fields": [
   {
@@ -38,41 +32,18 @@
    "reqd": 1
   },
   {
-   "fieldname": "platform",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Platform",
-   "options": "Facebook\nInstagram\nYouTube\nTwitter\nLinkedin",
-   "placeholder": "Select Platform",
-   "reqd": 1
-  },
-  {
-   "fieldname": "organization",
-   "fieldtype": "Link",
-   "label": "Organization",
-   "options": "CRM Organization",
-   "placeholder": "Select Organization",
-   "reqd": 1
-  },
-  {
-   "fieldname": "select_ad_account",
-   "fieldtype": "Link",
-   "label": "Select Ad Account",
-   "options": "Ads Account Integration",
-   "reqd": 1
-  },
-  {
    "fieldname": "column_break_kxpe",
    "fieldtype": "Column Break"
   },
   {
-   "default": "Draft",
+   "default": "PAUSED",
    "fieldname": "status",
    "fieldtype": "Select",
    "hidden": 1,
    "label": "Status",
-   "options": "Draft\nScheduled\nPublishing\nPublished\nFailed\nCancelled"
+   "options": "ACTIVE\nPAUSED\nDELETED\nARCHIVED",
+   "read_only": 1,
+   "sort_options": 1
   },
   {
    "fieldname": "section_break_fqjy",
@@ -86,45 +57,15 @@
    "reqd": 1
   },
   {
-   "fieldname": "post_details_section",
-   "fieldtype": "Section Break",
-   "label": "Post Details"
-  },
-  {
-   "fieldname": "content",
-   "fieldtype": "Text Editor",
-   "label": "Content",
-   "placeholder": "What's in your mind......"
-  },
-  {
-   "depends_on": "eval:doc.content",
-   "fieldname": "character_limit",
-   "fieldtype": "HTML",
-   "label": "Character Limit"
-  },
-  {
-   "fieldname": "media",
-   "fieldtype": "Table",
-   "label": "Media",
-   "options": "Social Post Media"
-  },
-  {
-   "fieldname": "section_break_cgkw",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "html",
-   "fieldtype": "HTML",
-   "label": "HTML"
-  },
-  {
    "fieldname": "section_break_qrje",
    "fieldtype": "Section Break"
   },
   {
    "fieldname": "schedule_time",
    "fieldtype": "Datetime",
-   "label": "Schedule Time"
+   "hidden": 1,
+   "label": "Schedule Time",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_wsas",
@@ -145,24 +86,41 @@
    "reqd": 1
   },
   {
-   "fieldname": "column_break_qxgh",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "section_break_owqn",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "hidden": 1
   },
   {
    "default": "0",
    "fieldname": "partnership_ad",
    "fieldtype": "Check",
    "label": "Partnership ad"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_ad",
+   "fieldtype": "Check",
+   "label": "Enable Ad"
+  },
+  {
+   "fieldname": "section_break_foek",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_dnls",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "select_ad_creative",
+   "fieldtype": "Link",
+   "label": "Select Ad Creative",
+   "options": "Ad Creative"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-23 09:54:11.802652",
+ "modified": "2026-03-02 11:04:34.744609",
  "modified_by": "Administrator",
  "module": "Ads Manager",
  "name": "Post Ads",
